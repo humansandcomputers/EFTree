@@ -1,5 +1,4 @@
-﻿
-namespace HAC.EFTree.Tests.Helpers;
+﻿namespace HAC.EFTree.Tests.Helpers;
 
 class DbContextFactory<TContext> : IDbContextFactory<TContext> where TContext : DbContext
 {
