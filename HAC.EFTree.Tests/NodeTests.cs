@@ -12,7 +12,7 @@ public class NodeTests
     public async Task Add_SetSafeAdd_Adds()
     {
         var context = factory.CreateDbContext();
-        context.Nodes.Add(new Node() { SafeAdd = true });
+        context.Nodes.Add(new MockNode() { Name = "A", SafeAdd = true });
         await context.SaveChangesAsync();
         Assert.NotNull(context.Nodes.FirstOrDefault());
     }
@@ -21,12 +21,17 @@ public class NodeTests
     public async Task Add_NotSetSafeAdd_Throws()
     {
         var context = factory.CreateDbContext();
-        context.Nodes.Add(new Node());
+        context.Nodes.Add(new MockNode() { Name = "A" });
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+    }
+
+    class MockNode : Node
+    {
+        public required string Name { get; set; }
     }
 
     class MockDbContext(DbContextOptions<MockDbContext> options) : DbContext(options)
     {
-        public DbSet<Node> Nodes { get; set; }
+        public DbSet<MockNode> Nodes { get; set; }
     }
 }

@@ -5,8 +5,8 @@ namespace HAC.EFTree;
 
 public static class DbSetExtensions
 {
-    static readonly Node virtualRoot = new() { Left = -1, Right = 0 };
-    
+    class VirtualNode : Node { };
+    readonly static Node virtualNode = new VirtualNode() { Left = -2, Right = -1 };
     public static void InsertAfter(this DbSet<Node> set, Node node, Node? sibling = default)
     {
 
@@ -18,9 +18,10 @@ public static class DbSetExtensions
     }
 
 
-    public static void AddChild(this DbSet<Node> set, Node node, Node? parent = default)
+    public static void AddChild<T>(this DbSet<T> set, T node, T? parent = default)
+        where T : Node
     {
-        var start = (parent ?? virtualRoot).Right;
+        var start = parent?.Right ?? set.MaxRight() + 1;
         set.Shift(start, 2);
         node.Left = start;
         node.Right = node.Left + 1;
@@ -28,7 +29,16 @@ public static class DbSetExtensions
         set.Add(node);
     }
 
-    static void Shift(this DbSet<Node> set, long start, long offset)
+    static long MaxRight<T>(this DbSet<T> set)
+            where T : Node
+    {
+        var localMax = set.Local.DefaultIfEmpty().Max(x => x?.Right);
+        var dbMax = set.DefaultIfEmpty().Max(x => x == null ? null : x.Right);
+        return new[] { virtualNode.Right, localMax, dbMax }.OfType<long>().Max();
+    }
+
+    static void Shift<T>(this DbSet<T> set, long start, long offset)
+        where T : Node
     {
         foreach (var x in set.Local.Where(x => start <= x.Left))
             x.Left += offset;

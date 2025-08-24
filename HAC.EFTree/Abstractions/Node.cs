@@ -7,7 +7,7 @@ namespace HAC.EFTree.Abstractions;
 
 [Index(nameof(Left), IsUnique = true)]
 [Index(nameof(Right), IsUnique = true)]
-public class Node
+public abstract class Node
 {
     public Guid Id { get; set; }
     internal long Left { get; set; }

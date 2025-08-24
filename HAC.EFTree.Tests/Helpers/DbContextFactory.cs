@@ -2,8 +2,8 @@
 
 class DbContextFactory<TContext> : IDbContextFactory<TContext> where TContext : DbContext
 {
-    DbContextOptions<TContext> options = new DbContextOptionsBuilder<TContext>()
-        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+    readonly DbContextOptions<TContext> options = new DbContextOptionsBuilder<TContext>()
+         .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
 
     public TContext CreateDbContext() => (TContext)Activator.CreateInstance(typeof(TContext), options)!;
 }
