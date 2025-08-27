@@ -21,7 +21,12 @@ public static class DbSetExtensions
     public static void InsertBefore<T>(this DbSet<T> set, T node, T? sibling = default)
         where T : Node
     {
-
+        var start = sibling?.Left ?? (set.MinLeft() + 1);
+        set.Shift(start, 2);
+        node.Left = start;
+        node.Right = node.Left + 1;
+        node.SafeAdd = true;
+        set.Add(node);
     }
 
     public static void AddChild<T>(this DbSet<T> set, T node, T? parent = default)
@@ -41,6 +46,14 @@ public static class DbSetExtensions
         var localMax = set.Local.DefaultIfEmpty().Max(x => x?.Right);
         var dbMax = set.DefaultIfEmpty().Max(x => x == null ? null : x.Right);
         return new[] { virtualNode.Right, localMax, dbMax }.OfType<long>().Max();
+    }
+
+    static long MinLeft<T>(this DbSet<T> set)
+            where T : Node
+    {
+        var localMin = set.Local.DefaultIfEmpty().Min(x => x?.Left);
+        var dbMin = set.DefaultIfEmpty().Min(x => x == null ? null : x.Left);
+        return new[] { virtualNode.Right, localMin, dbMin }.OfType<long>().Min();
     }
 
     static void Shift<T>(this DbSet<T> set, long start, long offset)
