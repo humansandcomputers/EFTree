@@ -161,7 +161,7 @@ public class DbSetAddingTests
         using (var context = factory.CreateDbContext())
         {
             var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            var B = Assert.Single(context.Nodes, x => x.Name == "A");
+            var B = Assert.Single(context.Nodes, x => x.Name == "B");
             var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
             var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
             AssertNode(A1);
@@ -173,29 +173,193 @@ public class DbSetAddingTests
         }
     }
 
-    static void AssertNode(Node node) => Assert.True(node.Left < node.Right,
-             $"Left:{node.Left} should be less than Right: {node.Right}.");
-
-    static void AssertChild(Node child, Node parent)
+    /// <summary>
+    /// |- A     => |- A
+    ///             \- B
+    /// </summary>
+    /// <returns></returns>
+    [Fact]
+    public async Task InsertAfterRoot_WithOtherSiblings_CorrectPositions()
     {
-        Assert.True(parent.Left < child.Left,
-             $"Child's Left: {child.Left} should be greater than parent's Left: {parent.Left}.");
-        Assert.True(child.Right < parent.Right,
-             $"Child's Right: {child.Right} should be less than parent's Right: {parent.Left}.");
+        using (var context = factory.CreateDbContext())
+        {
+            var A = new MockNode() { Name = "A" };
+            context.Nodes.AddChild(A);
+            await context.SaveChangesAsync();
+        }
+
+        using (var context = factory.CreateDbContext())
+        {
+            var B = new MockNode() { Name = "B" };
+            context.Nodes.InsertAfter(B);
+            await context.SaveChangesAsync();
+        }
+
+        using (var context = factory.CreateDbContext())
+        {
+            var A = Assert.Single(context.Nodes, x => x.Name == "A");
+            var B = Assert.Single(context.Nodes, x => x.Name == "B");
+            AssertNode(A);
+            AssertNode(B);
+            AssertSibling(A, B);
+        }
     }
 
-    static void AssertSibling(params Node[] siblings)
+    /// <summary>
+    /// |- A     => |- A
+    /// |  |- A1    |  |- A1
+    /// |  \- A2    |  |- A1_2
+    /// \- B        |  \- A2
+    ///             \- B
+    /// </summary>
+    /// <returns></returns>
+    [Fact]
+    public async Task InsertAfterNode_WithOtherSiblings_CorrectPositions()
+    {
+        using (var context = factory.CreateDbContext())
+        {
+            var A = new MockNode() { Name = "A" };
+            var B = new MockNode() { Name = "B" };
+            var A1 = new MockNode() { Name = "A1" };
+            var A2 = new MockNode() { Name = "A2" };
+            context.Nodes.AddChild(A);
+            context.Nodes.AddChild(B);
+            context.Nodes.AddChild(A1, A);
+            context.Nodes.AddChild(A2, A);
+            await context.SaveChangesAsync();
+        }
+
+        using (var context = factory.CreateDbContext())
+        {
+            var A1 = context.Nodes.Single(x => x.Name == "A1");
+            var A1_2 = new MockNode() { Name = "A1_2" };
+            context.Nodes.InsertAfter(A1_2, A1);
+            await context.SaveChangesAsync();
+        }
+
+        using (var context = factory.CreateDbContext())
+        {
+            var A = Assert.Single(context.Nodes, x => x.Name == "A");
+            var B = Assert.Single(context.Nodes, x => x.Name == "B");
+            var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
+            var A1_2 = Assert.Single(context.Nodes, x => x.Name == "A1_2");
+            var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
+            AssertNode(A1);
+            AssertNode(A1_2);
+            AssertNode(A2);
+            AssertChild(A1, A);
+            AssertChild(A1_2, A);
+            AssertChild(A2, A);
+            AssertSibling(A, B);
+            AssertSibling(A1, A1_2, A2);
+        }
+    }
+    /// <summary>
+    /// |- A     => |- A
+    ///             \- B
+    /// </summary>
+    /// <returns></returns>
+    [Fact]
+    public async Task InsertBeforeRoot_WithOtherSiblings_CorrectPositions()
+    {
+        using (var context = factory.CreateDbContext())
+        {
+            var B = new MockNode() { Name = "B" };
+            context.Nodes.AddChild(B);
+            await context.SaveChangesAsync();
+        }
+
+        using (var context = factory.CreateDbContext())
+        {
+            var A = new MockNode() { Name = "A" };
+            context.Nodes.InsertBefore(A);
+            await context.SaveChangesAsync();
+        }
+
+        using (var context = factory.CreateDbContext())
+        {
+            var A = Assert.Single(context.Nodes, x => x.Name == "A");
+            var B = Assert.Single(context.Nodes, x => x.Name == "B");
+            AssertNode(A);
+            AssertNode(B);
+            AssertSibling(A, B);
+        }
+    }
+
+    /// <summary>
+    /// |- A     => |- A
+    /// |  |- A1    |  |- A1
+    /// |  \- A2    |  |- A1_2
+    /// \- B        |  \- A2
+    ///             \- B
+    /// </summary>
+    /// <returns></returns>
+    [Fact]
+    public async Task InsertBeforeNode_WithOtherSiblings_CorrectPositions()
+    {
+        using (var context = factory.CreateDbContext())
+        {
+            var A = new MockNode() { Name = "A" };
+            var B = new MockNode() { Name = "B" };
+            var A1 = new MockNode() { Name = "A1" };
+            var A2 = new MockNode() { Name = "A2" };
+            context.Nodes.AddChild(A);
+            context.Nodes.AddChild(B);
+            context.Nodes.AddChild(A1, A);
+            context.Nodes.AddChild(A2, A);
+            await context.SaveChangesAsync();
+        }
+
+        using (var context = factory.CreateDbContext())
+        {
+            var A2 = context.Nodes.Single(x => x.Name == "A2");
+            var A1_2 = new MockNode() { Name = "A1_2" };
+            context.Nodes.InsertBefore(A1_2, A2);
+            await context.SaveChangesAsync();
+        }
+
+        using (var context = factory.CreateDbContext())
+        {
+            var A = Assert.Single(context.Nodes, x => x.Name == "A");
+            var B = Assert.Single(context.Nodes, x => x.Name == "B");
+            var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
+            var A1_2 = Assert.Single(context.Nodes, x => x.Name == "A1_2");
+            var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
+            AssertNode(A1);
+            AssertNode(A1_2);
+            AssertNode(A2);
+            AssertChild(A1, A);
+            AssertChild(A1_2, A);
+            AssertChild(A2, A);
+            AssertSibling(A, B);
+            AssertSibling(A1, A1_2, A2);
+        }
+    }
+
+    static void AssertNode(MockNode node) => Assert.True(node.Left < node.Right,
+        $"Invalid node '{node}': Left ({node.Left}) must be less than Right ({node.Right}).");
+
+    static void AssertChild(MockNode child, MockNode parent)
+    {
+        Assert.True(parent.Left < child.Left && child.Right < parent.Right,
+            $"Invalid hierarchy: parent node {parent} should be surrounding child node {child}");
+    }
+
+    static void AssertSibling(params MockNode[] siblings)
     {
         _ = siblings.Aggregate((a, b) =>
-            {
-                Assert.True(a.Right + 1 == b.Left,
-                $"Sibling's Right: {a.Right} should be less than next sibling's Left: {a.Left}"); return b;
-            });
+        {
+            Assert.True(a.Right + 1 == b.Left,
+                $"Invalid sibling order: Node {a} should directly precede Node {b}.");
+            return b;
+        });
     }
+
 
     class MockNode : Node
     {
         public required string Name { get; set; }
+        public override string ToString() => $"{Name} ({Left} {Right})";
     }
 
     class MockDbContext(DbContextOptions<MockDbContext> options) : DbContext(options)
