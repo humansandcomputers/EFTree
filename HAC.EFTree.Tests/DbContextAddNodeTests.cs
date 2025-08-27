@@ -179,7 +179,7 @@ public class DbSetAddingTests
     /// </summary>
     /// <returns></returns>
     [Fact]
-    public async Task InsertAfterRoot_WithOtherSiblings_CorrectPositions()
+    public async Task AddAfterRoot_WithOtherSiblings_CorrectPositions()
     {
         using (var context = factory.CreateDbContext())
         {
@@ -191,7 +191,7 @@ public class DbSetAddingTests
         using (var context = factory.CreateDbContext())
         {
             var B = new MockNode() { Name = "B" };
-            context.Nodes.InsertAfter(B);
+            context.Nodes.AddAfter(B);
             await context.SaveChangesAsync();
         }
 
@@ -214,7 +214,7 @@ public class DbSetAddingTests
     /// </summary>
     /// <returns></returns>
     [Fact]
-    public async Task InsertAfterNode_WithOtherSiblings_CorrectPositions()
+    public async Task AddAfterNode_WithOtherSiblings_CorrectPositions()
     {
         using (var context = factory.CreateDbContext())
         {
@@ -233,7 +233,7 @@ public class DbSetAddingTests
         {
             var A1 = context.Nodes.Single(x => x.Name == "A1");
             var A1_2 = new MockNode() { Name = "A1_2" };
-            context.Nodes.InsertAfter(A1_2, A1);
+            context.Nodes.AddAfter(A1_2, A1);
             await context.SaveChangesAsync();
         }
 
@@ -260,7 +260,7 @@ public class DbSetAddingTests
     /// </summary>
     /// <returns></returns>
     [Fact]
-    public async Task InsertBeforeRoot_WithOtherSiblings_CorrectPositions()
+    public async Task AddBeforeRoot_WithOtherSiblings_CorrectPositions()
     {
         using (var context = factory.CreateDbContext())
         {
@@ -272,7 +272,7 @@ public class DbSetAddingTests
         using (var context = factory.CreateDbContext())
         {
             var A = new MockNode() { Name = "A" };
-            context.Nodes.InsertBefore(A);
+            context.Nodes.AddBefore(A);
             await context.SaveChangesAsync();
         }
 
@@ -295,7 +295,7 @@ public class DbSetAddingTests
     /// </summary>
     /// <returns></returns>
     [Fact]
-    public async Task InsertBeforeNode_WithOtherSiblings_CorrectPositions()
+    public async Task AddBeforeNode_WithOtherSiblings_CorrectPositions()
     {
         using (var context = factory.CreateDbContext())
         {
@@ -314,7 +314,7 @@ public class DbSetAddingTests
         {
             var A2 = context.Nodes.Single(x => x.Name == "A2");
             var A1_2 = new MockNode() { Name = "A1_2" };
-            context.Nodes.InsertBefore(A1_2, A2);
+            context.Nodes.AddBefore(A1_2, A2);
             await context.SaveChangesAsync();
         }
 

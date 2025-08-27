@@ -7,7 +7,7 @@ public static class DbSetExtensions
 {
     class VirtualNode : Node { };
     readonly static Node virtualNode = new VirtualNode() { Left = -2, Right = -1 };
-    public static void InsertAfter<T>(this DbSet<T> set, T node, T? sibling = default)
+    public static void AddAfter<T>(this DbSet<T> set, T node, T? sibling = default)
         where T : Node
     {
         var start = (sibling?.Right ?? set.MaxRight()) + 1;
@@ -18,7 +18,7 @@ public static class DbSetExtensions
         set.Add(node);
     }
 
-    public static void InsertBefore<T>(this DbSet<T> set, T node, T? sibling = default)
+    public static void AddBefore<T>(this DbSet<T> set, T node, T? sibling = default)
         where T : Node
     {
         var start = sibling?.Left ?? (set.MinLeft() + 1);
