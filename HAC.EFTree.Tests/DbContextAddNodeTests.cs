@@ -25,7 +25,6 @@ public class DbSetAddingTests
         }
     }
 
-
     /// <summary>
     /// \- A => |- A
     ///         \- B
@@ -254,9 +253,11 @@ public class DbSetAddingTests
             AssertSibling(A1, A1_2, A2);
         }
     }
+
     /// <summary>
-    /// |- A     => |- A
+    /// \- B     => |- A
     ///             \- B
+    ///                |- B1
     /// </summary>
     /// <returns></returns>
     [Fact]
@@ -265,7 +266,9 @@ public class DbSetAddingTests
         using (var context = factory.CreateDbContext())
         {
             var B = new MockNode() { Name = "B" };
+            var B1 = new MockNode() { Name = "B1" };
             context.Nodes.AddChild(B);
+            context.Nodes.AddChild(B1, B);
             await context.SaveChangesAsync();
         }
 
@@ -280,9 +283,12 @@ public class DbSetAddingTests
         {
             var A = Assert.Single(context.Nodes, x => x.Name == "A");
             var B = Assert.Single(context.Nodes, x => x.Name == "B");
+            var B1 = Assert.Single(context.Nodes, x => x.Name == "B1");
             AssertNode(A);
             AssertNode(B);
+            AssertNode(B1);
             AssertSibling(A, B);
+            AssertChild(B1, B);
         }
     }
 
@@ -354,7 +360,6 @@ public class DbSetAddingTests
             return b;
         });
     }
-
 
     class MockNode : Node
     {

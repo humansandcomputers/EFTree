@@ -5,34 +5,32 @@ namespace HAC.EFTree;
 
 public static class DbSetExtensions
 {
-    class VirtualNode : Node { };
     readonly static Node virtualNode = new VirtualNode() { Left = -2, Right = -1 };
+
     public static void AddAfter<T>(this DbSet<T> set, T node, T? sibling = default)
         where T : Node
     {
         var start = (sibling?.Right ?? set.MaxRight()) + 1;
-        set.Shift(start, 2);
-        node.Left = start;
-        node.Right = node.Left + 1;
-        node.SafeAdd = true;
-        set.Add(node);
+        set.Add(node, start);
     }
 
     public static void AddBefore<T>(this DbSet<T> set, T node, T? sibling = default)
         where T : Node
     {
-        var start = sibling?.Left ?? (set.MinLeft() + 1);
-        set.Shift(start, 2);
-        node.Left = start;
-        node.Right = node.Left + 1;
-        node.SafeAdd = true;
-        set.Add(node);
+        var start = sibling?.Left ?? (set.MinLeft() + 2);
+        set.Add(node, start);
     }
 
     public static void AddChild<T>(this DbSet<T> set, T node, T? parent = default)
         where T : Node
     {
-        var start = parent?.Right ?? set.MaxRight() + 1;
+        var start = parent?.Right ?? (set.MaxRight() + 1);
+        set.Add(node, start);
+    }
+
+    static void Add<T>(this DbSet<T> set, T node, long start)
+        where T : Node
+    {
         set.Shift(start, 2);
         node.Left = start;
         node.Right = node.Left + 1;
@@ -53,7 +51,7 @@ public static class DbSetExtensions
     {
         var localMin = set.Local.DefaultIfEmpty().Min(x => x?.Left);
         var dbMin = set.DefaultIfEmpty().Min(x => x == null ? null : x.Left);
-        return new[] { virtualNode.Right, localMin, dbMin }.OfType<long>().Min();
+        return new[] { virtualNode.Left, localMin, dbMin }.OfType<long>().Min();
     }
 
     static void Shift<T>(this DbSet<T> set, long start, long offset)
@@ -67,4 +65,6 @@ public static class DbSetExtensions
         foreach (var x in rights)
             x.Right += offset;
     }
+    
+    class VirtualNode : Node;
 }
