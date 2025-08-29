@@ -6,26 +6,24 @@ namespace HAC.EFTree;
 
 public static class DbSetExtensions
 {
-    readonly static Node virtualNode = new VirtualNode() { Left = -2, Right = -1 };
+    public static void AddBefore<T>(this DbSet<T> set, T node, T? sibling = default)
+        where T : Node
+    {
+        var start = sibling?.Left ?? set.MinLeft() ?? default;
+        set.Add(node, start);
+    }
 
     public static void AddAfter<T>(this DbSet<T> set, T node, T? sibling = default)
         where T : Node
     {
-        var start = (sibling?.Right ?? set.MaxRight() ?? -1) + 1;
-        set.Add(node, start);
-    }
-
-    public static void AddBefore<T>(this DbSet<T> set, T node, T? sibling = default)
-        where T : Node
-    {
-        var start = sibling?.Left ?? set.MinLeft() ?? 0;
+        var start = (sibling?.Right + 1) ?? (set.MaxRight() + 1) ?? default;
         set.Add(node, start);
     }
 
     public static void AddChild<T>(this DbSet<T> set, T node, T? parent = default)
         where T : Node
     {
-        var start = parent?.Right ?? ((set.MaxRight() ?? -1) + 1);
+        var start = parent?.Right ?? (set.MaxRight() + 1) ?? default;
         set.Add(node, start);
     }
 
@@ -38,6 +36,10 @@ public static class DbSetExtensions
         node.SafeAdd = true;
         set.Add(node);
     }
+
+    static long? MaxRight<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Right, false);
+
+    static long? MinLeft<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Left, true);
 
     static long? Extremum<T>(this DbSet<T> set, Expression<Func<T?, long?>> expression, bool min)
             where T : Node
@@ -54,9 +56,6 @@ public static class DbSetExtensions
         return null;
     }
 
-    static long? MaxRight<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Right, false);
-    static long? MinLeft<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Left, true);
-
     static void Shift<T>(this DbSet<T> set, long start, long offset)
         where T : Node
     {
@@ -68,6 +67,4 @@ public static class DbSetExtensions
         foreach (var x in rights)
             x.Right += offset;
     }
-
-    class VirtualNode : Node;
 }
