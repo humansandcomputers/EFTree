@@ -39,51 +39,23 @@ public static class DbSetExtensions
         set.Add(node);
     }
 
-    static long? Extremum<T>(this DbSet<T> set, Func<T?, long?> selector, Expression<Func<T?, long?>> expression, bool min)
+    static long? Extremum<T>(this DbSet<T> set, Expression<Func<T?, long?>> expression, bool min)
             where T : Node
     {
-        var db = set.DefaultIfEmpty();
-        var local = set.Local.DefaultIfEmpty();
-
-        var dbValue = min ? db.Min(expression) : db.Max(expression);
-        var localValue = min ? local.Min(selector) : set.Max(selector);
-
-        if (dbValue is not null && localValue is not null)
-            return Math.Max(dbValue.Value, localValue.Value);
-        if (dbValue is not null)
-            return dbValue;
-        else if (localValue is not null)
-            return localValue;
+        var func = expression.Compile();
+        var local = min ? set.Local.DefaultIfEmpty().Min(func) : set.Local.DefaultIfEmpty().Max(func);
+        var db = min ? set.DefaultIfEmpty().Min(expression) : set.DefaultIfEmpty().Max(expression);
+        if (local is not null && db is not null)
+            return min ? Math.Min(local.Value, db.Value) : Math.Max(local.Value, db.Value);
+        if (local is not null)
+            return local;
+        if (db is not null)
+            return db;
         return null;
     }
 
-    static long? MaxRight<T>(this DbSet<T> set)
-            where T : Node
-    {
-        var localMax = set.Local.DefaultIfEmpty().Max(x => x?.Right);
-        var dbMax = set.DefaultIfEmpty().Max(x => x is null ? null : x.Right);
-        if (localMax is { } lm && dbMax is { } dm)
-            return Math.Max(lm, dm);
-        if (localMax is null)
-            return dbMax;
-        if (dbMax is null)
-            return localMax;
-        return null;
-    }
-
-    static long? MinLeft<T>(this DbSet<T> set)
-            where T : Node
-    {
-        var localMin = set.Local.DefaultIfEmpty().Min(x => x?.Left);
-        var dbMin = set.DefaultIfEmpty().Min(x => x == null ? null : x.Left);
-        if (localMin is { } lm && dbMin is { } dm)
-            return Math.Max(lm, dm);
-        if (localMin is null)
-            return dbMin;
-        if (dbMin is null)
-            return localMin;
-        return null;
-    }
+    static long? MaxRight<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Right, false);
+    static long? MinLeft<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Left, true);
 
     static void Shift<T>(this DbSet<T> set, long start, long offset)
         where T : Node
