@@ -342,6 +342,24 @@ public class DbSetAddingTests
         }
     }
 
+    [Fact]
+    public void AddChild_PreviouslyAddedNode_Throws()
+    {
+        using var context = factory.CreateDbContext();
+        var A = new MockNode() { Name = "A" };
+        context.Nodes.AddChild(A);
+        Assert.Throws<ArgumentException>(() => context.Nodes.AddChild(A));
+    }
+
+    [Fact]
+    public void AddChild_ToPreviouslyNotAddedParent_Throws()
+    {
+        using var context = factory.CreateDbContext();
+        var A = new MockNode() { Name = "A" };
+        var B = new MockNode() { Name = "B" };
+        Assert.Throws<ArgumentException>(() => context.Nodes.AddChild(A, B));
+    }
+
     static void AssertNode(MockNode node) => Assert.True(node.Left < node.Right,
         $"Invalid node '{node}': Left ({node.Left}) must be less than Right ({node.Right}).");
 

@@ -23,6 +23,10 @@ public static class DbSetExtensions
     public static void AddChild<T>(this DbSet<T> set, T node, T? parent = default)
         where T : Node
     {
+        if (node.SafeAdd is true)
+            throw new ArgumentException("Can't node that has been added previously.");
+        if (parent is not null && parent?.SafeAdd is null)
+            throw new ArgumentException("Parent should be added first.");
         var start = parent?.Right ?? (set.MaxRight() + 1) ?? default;
         set.Add(node, start);
     }
