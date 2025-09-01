@@ -360,6 +360,42 @@ public class DbSetAddingTests
         Assert.Throws<ArgumentException>(() => context.Nodes.AddChild(A, B));
     }
 
+    [Fact]
+    public void AddBefore_PreviouslyAddedNode_Throws()
+    {
+        using var context = factory.CreateDbContext();
+        var A = new MockNode() { Name = "A" };
+        context.Nodes.AddChild(A);
+        Assert.Throws<ArgumentException>(() => context.Nodes.AddBefore(A));
+    }
+
+    [Fact]
+    public void AddBefore_ToPreviouslyNotAddedSibling_Throws()
+    {
+        using var context = factory.CreateDbContext();
+        var A = new MockNode() { Name = "A" };
+        var B = new MockNode() { Name = "B" };
+        Assert.Throws<ArgumentException>(() => context.Nodes.AddBefore(A, B));
+    }
+
+    [Fact]
+    public void AddAfter_PreviouslyAddedNode_Throws()
+    {
+        using var context = factory.CreateDbContext();
+        var A = new MockNode() { Name = "A" };
+        context.Nodes.AddChild(A);
+        Assert.Throws<ArgumentException>(() => context.Nodes.AddAfter(A));
+    }
+
+    [Fact]
+    public void AddAfter_ToPreviouslyNotAddedSibling_Throws()
+    {
+        using var context = factory.CreateDbContext();
+        var A = new MockNode() { Name = "A" };
+        var B = new MockNode() { Name = "B" };
+        Assert.Throws<ArgumentException>(() => context.Nodes.AddAfter(A, B));
+    }
+
     static void AssertNode(MockNode node) => Assert.True(node.Left < node.Right,
         $"Invalid node '{node}': Left ({node.Left}) must be less than Right ({node.Right}).");
 

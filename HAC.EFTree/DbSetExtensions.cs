@@ -1,34 +1,22 @@
 ﻿using HAC.EFTree.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace HAC.EFTree;
 
 public static class DbSetExtensions
 {
-    public static void AddBefore<T>(this DbSet<T> set, T node, T? sibling = default)
+    static void Shift<T>(this DbSet<T> set, long start, long offset)
         where T : Node
     {
-        var start = sibling?.Left ?? set.MinLeft() ?? default;
-        set.Add(node, start);
-    }
+        var lefts = set.Where(x => start <= x.Left).AsEnumerable().Concat(set.Local.Where(x => start <= x.Left)).Distinct();
+        foreach (var x in lefts)
+            x.Left += offset;
 
-    public static void AddAfter<T>(this DbSet<T> set, T node, T? sibling = default)
-        where T : Node
-    {
-        var start = (sibling?.Right + 1) ?? (set.MaxRight() + 1) ?? default;
-        set.Add(node, start);
-    }
-
-    public static void AddChild<T>(this DbSet<T> set, T node, T? parent = default)
-        where T : Node
-    {
-        if (node.SafeAdd is true)
-            throw new ArgumentException("Can't node that has been added previously.");
-        if (parent is not null && parent?.SafeAdd is null)
-            throw new ArgumentException("Parent should be added first.");
-        var start = parent?.Right ?? (set.MaxRight() + 1) ?? default;
-        set.Add(node, start);
+        var rights = set.Where(x => start <= x.Right).AsEnumerable().Concat(set.Local.Where(x => start <= x.Right)).Distinct();
+        foreach (var x in rights)
+            x.Right += offset;
     }
 
     static void Add<T>(this DbSet<T> set, T node, long start)
@@ -41,9 +29,14 @@ public static class DbSetExtensions
         set.Add(node);
     }
 
-    static long? MaxRight<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Right, false);
-
-    static long? MinLeft<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Left, true);
+    static void ValidateAdd<T>(T node, T? toNode = default, [CallerArgumentExpression(nameof(toNode))] string? name = default)
+        where T : Node
+    {
+        if (node.SafeAdd is true)
+            throw new ArgumentException("Can't add node that has been added previously.");
+        if (toNode is not null && toNode?.SafeAdd is not true)
+            throw new ArgumentException($"Can't add node to a {name} node that is not added yet.");
+    }
 
     static long? Extremum<T>(this DbSet<T> set, Expression<Func<T?, long?>> expression, bool min)
             where T : Node
@@ -60,15 +53,31 @@ public static class DbSetExtensions
         return null;
     }
 
-    static void Shift<T>(this DbSet<T> set, long start, long offset)
+    static long? MaxRight<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Right, false);
+
+    static long? MinLeft<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Left, true);
+
+    public static void AddBefore<T>(this DbSet<T> set, T node, T? sibling = default)
         where T : Node
     {
-        var lefts = set.Where(x => start <= x.Left).AsEnumerable().Concat(set.Local.Where(x => start <= x.Left)).Distinct();
-        foreach (var x in lefts)
-            x.Left += offset;
+        ValidateAdd(node, sibling);
+        var start = sibling?.Left ?? set.MinLeft() ?? default;
+        set.Add(node, start);
+    }
 
-        var rights = set.Where(x => start <= x.Right).AsEnumerable().Concat(set.Local.Where(x => start <= x.Right)).Distinct();
-        foreach (var x in rights)
-            x.Right += offset;
+    public static void AddAfter<T>(this DbSet<T> set, T node, T? sibling = default)
+        where T : Node
+    {
+        ValidateAdd(node, sibling);
+        var start = (sibling?.Right + 1) ?? (set.MaxRight() + 1) ?? default;
+        set.Add(node, start);
+    }
+
+    public static void AddChild<T>(this DbSet<T> set, T node, T? parent = default)
+        where T : Node
+    {
+        ValidateAdd(node, parent);
+        var start = parent?.Right ?? (set.MaxRight() + 1) ?? default;
+        set.Add(node, start);
     }
 }
