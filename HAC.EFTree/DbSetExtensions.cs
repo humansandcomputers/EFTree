@@ -80,4 +80,10 @@ public static class DbSetExtensions
         var start = parent?.Right ?? (set.MaxRight() + 1) ?? default;
         set.Add(node, start);
     }
+
+    public static void Move<T>(this DbSet<T> set, T node, T? parent = default)
+        where T : Node
+    {
+
+    }
 }
