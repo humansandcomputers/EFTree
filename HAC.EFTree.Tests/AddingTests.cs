@@ -1,6 +1,6 @@
 ﻿namespace HAC.EFTree.Tests;
 
-public class DbSetAddingTests
+public class AddingTests
 {
     readonly DbContextFactory<MockDbContext> factory = new();
 
