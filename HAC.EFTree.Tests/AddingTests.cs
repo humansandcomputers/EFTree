@@ -1,5 +1,4 @@
 ﻿namespace HAC.EFTree.Tests;
-
 public class AddingTests
 {
     readonly DbContextFactory<MockDbContext> factory = new();
@@ -21,7 +20,7 @@ public class AddingTests
         using (var context = factory.CreateDbContext())
         {
             var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            AssertNode(A);
+            TreeAssert.Node(A);
         }
     }
 
@@ -51,9 +50,9 @@ public class AddingTests
         {
             var A = Assert.Single(context.Nodes, x => x.Name == "A");
             var B = Assert.Single(context.Nodes, x => x.Name == "B");
-            AssertNode(A);
-            AssertNode(B);
-            AssertSibling(A, B);
+            TreeAssert.Node(A);
+            TreeAssert.Node(B);
+            TreeAssert.Siblings(A, B);
         }
     }
 
@@ -84,8 +83,8 @@ public class AddingTests
         {
             var A = Assert.Single(context.Nodes, x => x.Name == "A");
             var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
-            AssertNode(A1);
-            AssertChild(A1, A);
+            TreeAssert.Node(A1);
+            TreeAssert.Child(A1, A);
         }
     }
 
@@ -120,11 +119,11 @@ public class AddingTests
             var A = Assert.Single(context.Nodes, x => x.Name == "A");
             var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
             var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
-            AssertNode(A1);
-            AssertNode(A2);
-            AssertChild(A1, A);
-            AssertChild(A2, A);
-            AssertSibling(A1, A2);
+            TreeAssert.Node(A1);
+            TreeAssert.Node(A2);
+            TreeAssert.Child(A1, A);
+            TreeAssert.Child(A2, A);
+            TreeAssert.Siblings(A1, A2);
         }
     }
 
@@ -163,12 +162,12 @@ public class AddingTests
             var B = Assert.Single(context.Nodes, x => x.Name == "B");
             var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
             var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
-            AssertNode(A1);
-            AssertNode(A2);
-            AssertChild(A1, A);
-            AssertChild(A2, A);
-            AssertSibling(A1, A2);
-            AssertSibling(A, B);
+            TreeAssert.Node(A1);
+            TreeAssert.Node(A2);
+            TreeAssert.Child(A1, A);
+            TreeAssert.Child(A2, A);
+            TreeAssert.Siblings(A1, A2);
+            TreeAssert.Siblings(A, B);
         }
     }
 
@@ -198,9 +197,9 @@ public class AddingTests
         {
             var A = Assert.Single(context.Nodes, x => x.Name == "A");
             var B = Assert.Single(context.Nodes, x => x.Name == "B");
-            AssertNode(A);
-            AssertNode(B);
-            AssertSibling(A, B);
+            TreeAssert.Node(A);
+            TreeAssert.Node(B);
+            TreeAssert.Siblings(A, B);
         }
     }
 
@@ -243,14 +242,14 @@ public class AddingTests
             var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
             var A1_2 = Assert.Single(context.Nodes, x => x.Name == "A1_2");
             var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
-            AssertNode(A1);
-            AssertNode(A1_2);
-            AssertNode(A2);
-            AssertChild(A1, A);
-            AssertChild(A1_2, A);
-            AssertChild(A2, A);
-            AssertSibling(A, B);
-            AssertSibling(A1, A1_2, A2);
+            TreeAssert.Node(A1);
+            TreeAssert.Node(A1_2);
+            TreeAssert.Node(A2);
+            TreeAssert.Child(A1, A);
+            TreeAssert.Child(A1_2, A);
+            TreeAssert.Child(A2, A);
+            TreeAssert.Siblings(A, B);
+            TreeAssert.Siblings(A1, A1_2, A2);
         }
     }
 
@@ -284,11 +283,11 @@ public class AddingTests
             var A = Assert.Single(context.Nodes, x => x.Name == "A");
             var B = Assert.Single(context.Nodes, x => x.Name == "B");
             var B1 = Assert.Single(context.Nodes, x => x.Name == "B1");
-            AssertNode(A);
-            AssertNode(B);
-            AssertNode(B1);
-            AssertSibling(A, B);
-            AssertChild(B1, B);
+            TreeAssert.Node(A);
+            TreeAssert.Node(B);
+            TreeAssert.Node(B1);
+            TreeAssert.Siblings(A, B);
+            TreeAssert.Child(B1, B);
         }
     }
 
@@ -331,14 +330,14 @@ public class AddingTests
             var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
             var A1_2 = Assert.Single(context.Nodes, x => x.Name == "A1_2");
             var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
-            AssertNode(A1);
-            AssertNode(A1_2);
-            AssertNode(A2);
-            AssertChild(A1, A);
-            AssertChild(A1_2, A);
-            AssertChild(A2, A);
-            AssertSibling(A, B);
-            AssertSibling(A1, A1_2, A2);
+            TreeAssert.Node(A1);
+            TreeAssert.Node(A1_2);
+            TreeAssert.Node(A2);
+            TreeAssert.Child(A1, A);
+            TreeAssert.Child(A1_2, A);
+            TreeAssert.Child(A2, A);
+            TreeAssert.Siblings(A, B);
+            TreeAssert.Siblings(A1, A1_2, A2);
         }
     }
 
@@ -394,35 +393,5 @@ public class AddingTests
         var A = new MockNode() { Name = "A" };
         var B = new MockNode() { Name = "B" };
         Assert.Throws<ArgumentException>(() => context.Nodes.AddAfter(A, B));
-    }
-
-    static void AssertNode(MockNode node) => Assert.True(node.Left < node.Right,
-        $"Invalid node '{node}': Left ({node.Left}) must be less than Right ({node.Right}).");
-
-    static void AssertChild(MockNode child, MockNode parent)
-    {
-        Assert.True(parent.Left < child.Left && child.Right < parent.Right,
-            $"Invalid hierarchy: parent node {parent} should be surrounding child node {child}");
-    }
-
-    static void AssertSibling(params MockNode[] siblings)
-    {
-        _ = siblings.Aggregate((a, b) =>
-        {
-            Assert.True(a.Right + 1 == b.Left,
-                $"Invalid sibling order: Node {a} should directly precede Node {b}.");
-            return b;
-        });
-    }
-
-    class MockNode : Node
-    {
-        public required string Name { get; set; }
-        public override string ToString() => $"{Name} ({Left} {Right})";
-    }
-
-    class MockDbContext(DbContextOptions<MockDbContext> options) : DbContext(options)
-    {
-        public DbSet<MockNode> Nodes { get; set; }
     }
 }
