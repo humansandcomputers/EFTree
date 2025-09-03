@@ -72,6 +72,7 @@ public class MovingTests
             TreeAssert.Single(context.Nodes, out var X);
             TreeAssert.Single(context.Nodes, out var D);
             context.Nodes.Move(X, D);
+            await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())

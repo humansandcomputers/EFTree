@@ -19,6 +19,20 @@ public static class DbSetExtensions
             x.Right += offset;
     }
 
+    static void Shift<T>(this DbSet<T> set, long start, long end, long offset)
+        where T : Node
+    {
+        var lefts = set.Where(x => start <= x.Left && x.Left < end).AsEnumerable()
+                       .Concat(set.Local.Where(x => start <= x.Left && x.Left < end)).Distinct();
+        foreach (var x in lefts)
+            x.Left += offset;
+
+        var rights = set.Where(x => start <= x.Right && x.Right < end).AsEnumerable()
+                        .Concat(set.Local.Where(x => start <= x.Right && x.Right < end)).Distinct();
+        foreach (var x in rights)
+            x.Right += offset;
+    }
+
     static void Add<T>(this DbSet<T> set, T node, long start)
         where T : Node
     {
@@ -80,10 +94,17 @@ public static class DbSetExtensions
         var start = parent?.Right ?? (set.MaxRight() + 1) ?? default;
         set.Add(node, start);
     }
-
+    // A    B    C    D    E
+    // |    |hole|patc|    |
     public static void Move<T>(this DbSet<T> set, T node, T? parent = default)
         where T : Node
     {
-
+        var start = node.Right+1;
+        var end = parent.Right;
+        var hstart = node.Left;
+        var hend = node.Right + 1;
+        set.Shift(hstart, hend, -hend);
+        set.Shift(start, end, start - end);
+        set.Shift(hstart - hend, 0, hend + end - start);
     }
 }
