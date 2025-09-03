@@ -11,14 +11,14 @@ public class AddingTests
     {
         using (var context = factory.CreateDbContext())
         {
-            var A = new MockNode() { Name = "A" };
+            MockNode.Create(out var A);
             context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = Assert.Single(context.Nodes, x => x.Name == "A");
+            TreeAssert.Single(context.Nodes, out var A);
             TreeAssert.Node(A);
         }
     }
@@ -32,22 +32,22 @@ public class AddingTests
     {
         using (var context = factory.CreateDbContext())
         {
-            var A = new MockNode() { Name = "A" };
+            MockNode.Create(out var A);
             context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var B = new MockNode() { Name = "B" };
+            MockNode.Create(out var B);
             context.Nodes.AddChild(B);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            var B = Assert.Single(context.Nodes, x => x.Name == "B");
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var B);
             TreeAssert.Node(A);
             TreeAssert.Node(B);
             TreeAssert.Siblings(A, B);
@@ -63,23 +63,23 @@ public class AddingTests
     {
         using (var context = factory.CreateDbContext())
         {
-            var A = new MockNode() { Name = "A" };
+            MockNode.Create(out var A);
             context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = context.Nodes.Single(x => x.Name == "A");
-            var A1 = new MockNode() { Name = "A1" };
+            TreeAssert.Single(context.Nodes, out var A);
+            MockNode.Create(out var A1);
             context.Nodes.AddChild(A1, A);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var A1);
             TreeAssert.Node(A1);
             TreeAssert.Child(A1, A);
         }
@@ -95,8 +95,8 @@ public class AddingTests
     {
         using (var context = factory.CreateDbContext())
         {
-            var A = new MockNode() { Name = "A" };
-            var A1 = new MockNode() { Name = "A1" };
+            MockNode.Create(out var A);
+            MockNode.Create(out var A1);
             context.Nodes.AddChild(A);
             context.Nodes.AddChild(A1, A);
             await context.SaveChangesAsync();
@@ -104,17 +104,17 @@ public class AddingTests
 
         using (var context = factory.CreateDbContext())
         {
-            var A = context.Nodes.Single(x => x.Name == "A");
-            var A2 = new MockNode() { Name = "A2" };
+            TreeAssert.Single(context.Nodes, out var A);
+            MockNode.Create(out var A2);
             context.Nodes.AddChild(A2, A);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
-            var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var A1);
+            TreeAssert.Single(context.Nodes, out var A2);
             TreeAssert.Node(A1);
             TreeAssert.Node(A2);
             TreeAssert.Child(A1, A);
@@ -134,9 +134,9 @@ public class AddingTests
     {
         using (var context = factory.CreateDbContext())
         {
-            var A = new MockNode() { Name = "A" };
-            var B = new MockNode() { Name = "B" };
-            var A1 = new MockNode() { Name = "A1" };
+            MockNode.Create(out var A);
+            MockNode.Create(out var B);
+            MockNode.Create(out var A1);
             context.Nodes.AddChild(A);
             context.Nodes.AddChild(B);
             context.Nodes.AddChild(A1, A);
@@ -145,18 +145,18 @@ public class AddingTests
 
         using (var context = factory.CreateDbContext())
         {
-            var A = context.Nodes.Single(x => x.Name == "A");
-            var A2 = new MockNode() { Name = "A2" };
+            TreeAssert.Single(context.Nodes, out var A);
+            MockNode.Create(out var A2);
             context.Nodes.AddChild(A2, A);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            var B = Assert.Single(context.Nodes, x => x.Name == "B");
-            var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
-            var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var B);
+            TreeAssert.Single(context.Nodes, out var A1);
+            TreeAssert.Single(context.Nodes, out var A2);
             TreeAssert.Node(A1);
             TreeAssert.Node(A2);
             TreeAssert.Child(A1, A);
@@ -176,8 +176,8 @@ public class AddingTests
     {
         using (var context = factory.CreateDbContext())
         {
-            var B = new MockNode() { Name = "B" };
-            var B1 = new MockNode() { Name = "B1" };
+            MockNode.Create(out var B);
+            MockNode.Create(out var B1);
             context.Nodes.AddChild(B);
             context.Nodes.AddChild(B1, B);
             await context.SaveChangesAsync();
@@ -185,16 +185,16 @@ public class AddingTests
 
         using (var context = factory.CreateDbContext())
         {
-            var A = new MockNode() { Name = "A" };
+            MockNode.Create(out var A);
             context.Nodes.AddBefore(A);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            var B = Assert.Single(context.Nodes, x => x.Name == "B");
-            var B1 = Assert.Single(context.Nodes, x => x.Name == "B1");
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var B);
+            TreeAssert.Single(context.Nodes, out var B1);
             TreeAssert.Node(A);
             TreeAssert.Node(B);
             TreeAssert.Node(B1);
@@ -215,10 +215,10 @@ public class AddingTests
     {
         using (var context = factory.CreateDbContext())
         {
-            var A = new MockNode() { Name = "A" };
-            var B = new MockNode() { Name = "B" };
-            var A1 = new MockNode() { Name = "A1" };
-            var A2 = new MockNode() { Name = "A2" };
+            MockNode.Create(out var A);
+            MockNode.Create(out var B);
+            MockNode.Create(out var A1);
+            MockNode.Create(out var A2);
             context.Nodes.AddChild(A);
             context.Nodes.AddChild(B);
             context.Nodes.AddChild(A1, A);
@@ -228,19 +228,19 @@ public class AddingTests
 
         using (var context = factory.CreateDbContext())
         {
-            var A2 = context.Nodes.Single(x => x.Name == "A2");
-            var A1_2 = new MockNode() { Name = "A1_2" };
+            TreeAssert.Single(context.Nodes, out var A2);
+            MockNode.Create(out var A1_2);
             context.Nodes.AddBefore(A1_2, A2);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            var B = Assert.Single(context.Nodes, x => x.Name == "B");
-            var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
-            var A1_2 = Assert.Single(context.Nodes, x => x.Name == "A1_2");
-            var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var B);
+            TreeAssert.Single(context.Nodes, out var A1);
+            TreeAssert.Single(context.Nodes, out var A1_2);
+            TreeAssert.Single(context.Nodes, out var A2);
             TreeAssert.Node(A1);
             TreeAssert.Node(A1_2);
             TreeAssert.Node(A2);
@@ -261,22 +261,22 @@ public class AddingTests
     {
         using (var context = factory.CreateDbContext())
         {
-            var A = new MockNode() { Name = "A" };
+            MockNode.Create(out var A);
             context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var B = new MockNode() { Name = "B" };
+            MockNode.Create(out var B);
             context.Nodes.AddAfter(B);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            var B = Assert.Single(context.Nodes, x => x.Name == "B");
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var B);
             TreeAssert.Node(A);
             TreeAssert.Node(B);
             TreeAssert.Siblings(A, B);
@@ -295,10 +295,10 @@ public class AddingTests
     {
         using (var context = factory.CreateDbContext())
         {
-            var A = new MockNode() { Name = "A" };
-            var B = new MockNode() { Name = "B" };
-            var A1 = new MockNode() { Name = "A1" };
-            var A2 = new MockNode() { Name = "A2" };
+            MockNode.Create(out var A);
+            MockNode.Create(out var B);
+            MockNode.Create(out var A1);
+            MockNode.Create(out var A2);
             context.Nodes.AddChild(A);
             context.Nodes.AddChild(B);
             context.Nodes.AddChild(A1, A);
@@ -308,19 +308,19 @@ public class AddingTests
 
         using (var context = factory.CreateDbContext())
         {
-            var A1 = context.Nodes.Single(x => x.Name == "A1");
-            var A1_2 = new MockNode() { Name = "A1_2" };
+            TreeAssert.Single(context.Nodes, out var A1);
+            MockNode.Create(out var A1_2);
             context.Nodes.AddAfter(A1_2, A1);
             await context.SaveChangesAsync();
         }
 
         using (var context = factory.CreateDbContext())
         {
-            var A = Assert.Single(context.Nodes, x => x.Name == "A");
-            var B = Assert.Single(context.Nodes, x => x.Name == "B");
-            var A1 = Assert.Single(context.Nodes, x => x.Name == "A1");
-            var A1_2 = Assert.Single(context.Nodes, x => x.Name == "A1_2");
-            var A2 = Assert.Single(context.Nodes, x => x.Name == "A2");
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var B);
+            TreeAssert.Single(context.Nodes, out var A1);
+            TreeAssert.Single(context.Nodes, out var A1_2);
+            TreeAssert.Single(context.Nodes, out var A2);
             TreeAssert.Node(A1);
             TreeAssert.Node(A1_2);
             TreeAssert.Node(A2);
@@ -336,7 +336,7 @@ public class AddingTests
     public void AddChild_PreviouslyAddedNode_Throws()
     {
         using var context = factory.CreateDbContext();
-        var A = new MockNode() { Name = "A" };
+        MockNode.Create(out var A);
         context.Nodes.AddChild(A);
         Assert.Throws<ArgumentException>(() => context.Nodes.AddChild(A));
     }
@@ -345,8 +345,8 @@ public class AddingTests
     public void AddChild_ToPreviouslyNotAddedParent_Throws()
     {
         using var context = factory.CreateDbContext();
-        var A = new MockNode() { Name = "A" };
-        var B = new MockNode() { Name = "B" };
+        MockNode.Create(out var A);
+        MockNode.Create(out var B);
         Assert.Throws<ArgumentException>(() => context.Nodes.AddChild(A, B));
     }
 
@@ -354,7 +354,7 @@ public class AddingTests
     public void AddBefore_PreviouslyAddedNode_Throws()
     {
         using var context = factory.CreateDbContext();
-        var A = new MockNode() { Name = "A" };
+        MockNode.Create(out var A);
         context.Nodes.AddChild(A);
         Assert.Throws<ArgumentException>(() => context.Nodes.AddBefore(A));
     }
@@ -363,8 +363,8 @@ public class AddingTests
     public void AddBefore_ToPreviouslyNotAddedSibling_Throws()
     {
         using var context = factory.CreateDbContext();
-        var A = new MockNode() { Name = "A" };
-        var B = new MockNode() { Name = "B" };
+        MockNode.Create(out var A);
+        MockNode.Create(out var B);
         Assert.Throws<ArgumentException>(() => context.Nodes.AddBefore(A, B));
     }
 
@@ -372,7 +372,7 @@ public class AddingTests
     public void AddAfter_PreviouslyAddedNode_Throws()
     {
         using var context = factory.CreateDbContext();
-        var A = new MockNode() { Name = "A" };
+        MockNode.Create(out var A);
         context.Nodes.AddChild(A);
         Assert.Throws<ArgumentException>(() => context.Nodes.AddAfter(A));
     }
@@ -381,8 +381,8 @@ public class AddingTests
     public void AddAfter_ToPreviouslyNotAddedSibling_Throws()
     {
         using var context = factory.CreateDbContext();
-        var A = new MockNode() { Name = "A" };
-        var B = new MockNode() { Name = "B" };
+        MockNode.Create(out var A);
+        MockNode.Create(out var B);
         Assert.Throws<ArgumentException>(() => context.Nodes.AddAfter(A, B));
     }
 }
