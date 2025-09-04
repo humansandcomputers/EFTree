@@ -1,5 +1,6 @@
 ﻿using HAC.EFTree.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 
@@ -94,17 +95,20 @@ public static class DbSetExtensions
         var start = parent?.Right ?? (set.MaxRight() + 1) ?? default;
         set.Add(node, start);
     }
-    // A    B    C    D    E
-    // |    |hole|patc|    |
+
     public static void Move<T>(this DbSet<T> set, T node, T? parent = default)
         where T : Node
     {
-        var start = node.Right+1;
-        var end = parent.Right;
-        var hstart = node.Left;
-        var hend = node.Right + 1;
-        set.Shift(hstart, hend, -hend);
-        set.Shift(start, end, start - end);
-        set.Shift(hstart - hend, 0, hend + end - start);
+        var target = parent?.Right ?? (set.MaxRight() + 2) ?? default;
+        var hole = new Span(node.Left, node.Right + 1);
+        var patch = new Span(node.Right + 1, target);
+        set.Shift(hole.Start, hole.End, -hole.End);
+        set.Shift(patch.Start, patch.End, -patch.Length);
+        set.Shift(hole.Start - hole.End, 0, hole.End + patch.Length - 1);
+    }
+
+    record Span(long Start, long End)
+    {
+        public long Length => End - Start;
     }
 }
