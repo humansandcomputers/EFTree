@@ -12,7 +12,7 @@ public class MovingTests(ITestOutputHelper output) : IDisposable
     ///    \- A1    \- A1
     /// </summary>
     [Fact]
-    public async Task Move_FromNodeToRoot_CorrectPositions()
+    public async Task Move_FromParentToRoot_CorrectPositions()
     {
         using (var context = factory.CreateDbContext())
         {
@@ -50,7 +50,7 @@ public class MovingTests(ITestOutputHelper output) : IDisposable
     /// |- E           |- E
     /// </summary>
     [Fact]
-    public async Task Move_FromNodeToNode_CorrectPositions2()
+    public async Task Move_FromParentToAnotherParent_CorrectPositions2()
     {
         using (var context = factory.CreateDbContext())
         {

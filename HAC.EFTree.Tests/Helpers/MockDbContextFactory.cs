@@ -12,7 +12,7 @@ class MockDbContextFactory(ITestOutputHelper output) : IDbContextFactory<MockDbC
     public void Dispose() => output.WriteLine(stringColumnBuilder.ToString());
 }
 
-class MockDbContext(DbContextOptions<MockDbContext> options, StringColumnBuilder output) : DbContext(options)
+class MockDbContext(DbContextOptions<MockDbContext> options, StringColumnBuilder stringColumnBuilder) : DbContext(options)
 {
     public DbSet<MockNode> Nodes { get; set; }
 
@@ -21,7 +21,7 @@ class MockDbContext(DbContextOptions<MockDbContext> options, StringColumnBuilder
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var result = await base.SaveChangesAsync(cancellationToken);
-        output.AddColumns(this);
+        stringColumnBuilder.AddColumns(this);
         return result;
     }
 }
