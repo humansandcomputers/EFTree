@@ -11,14 +11,30 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
 
     /// <summary>
     /// |- A     => |- A
+    ///             \- A
+    /// </summary>
+    [Fact]
+    public void AddAfter_PreviouslyAdded_Throws()
+    {
+        // Arrange
+        using var context = factory.CreateDbContext();
+        MockNode.Create(out var A);
+        context.Nodes.AddChild(A);
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => context.Nodes.AddAfter(A));
+    }
+
+    /// <summary>
+    /// |- A     => |- A
     /// |  |- A1    |  |- A1
     /// |  \- A2    |  |- A1_2
     /// \- B        |  \- A2
     ///             \- B
     /// </summary>
     [Fact]
-    public async Task AddAfter_NextToNodeWithOtherSiblings_CorrectPositions()
+    public async Task AddAfter_AfterNodeWithOtherSiblings_ValidHierarchy()
     {
+        // Arrange
         using (var context = factory.CreateDbContext())
         {
             MockNode.Create(out var A);
@@ -31,7 +47,7 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
             context.Nodes.AddChild(A2, A);
             await context.SaveChangesAsync();
         }
-
+        // Act
         using (var context = factory.CreateDbContext())
         {
             TreeAssert.Single(context.Nodes, out var A1);
@@ -39,7 +55,7 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
             context.Nodes.AddAfter(A1_2, A1);
             await context.SaveChangesAsync();
         }
-
+        // Assert
         using (var context = factory.CreateDbContext())
         {
             TreeAssert.Single(context.Nodes, out var A);
@@ -58,45 +74,28 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
         }
     }
 
-    [Fact]
-    public void AddAfter_PreviouslyAddedNode_Throws()
-    {
-        using var context = factory.CreateDbContext();
-        MockNode.Create(out var A);
-        context.Nodes.AddChild(A);
-        Assert.Throws<ArgumentException>(() => context.Nodes.AddAfter(A));
-    }
-
-    [Fact]
-    public void AddAfter_ToPreviouslyNotAddedSibling_Throws()
-    {
-        using var context = factory.CreateDbContext();
-        MockNode.Create(out var A);
-        MockNode.Create(out var B);
-        Assert.Throws<ArgumentException>(() => context.Nodes.AddAfter(A, B));
-    }
-
     /// <summary>
     /// |- A     => |- A
     ///             \- B
     /// </summary>
     [Fact]
-    public async Task AddAfter_ToRoot_CorrectPositions()
+    public async Task AddAfter_AfterRoot_ValidHierarchy()
     {
+        // Arrange
         using (var context = factory.CreateDbContext())
         {
             MockNode.Create(out var A);
             context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
         }
-
+        // Act
         using (var context = factory.CreateDbContext())
         {
             MockNode.Create(out var B);
             context.Nodes.AddAfter(B);
             await context.SaveChangesAsync();
         }
-
+        // Assert
         using (var context = factory.CreateDbContext())
         {
             TreeAssert.Single(context.Nodes, out var A);
@@ -108,6 +107,36 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
     }
 
     /// <summary>
+    ///          => |- A
+    ///             \- B
+    /// </summary>
+    [Fact]
+    public void AddAfter_AfterNodeNotPreviouslyAdded_Throws()
+    {
+        // Arrange
+        using var context = factory.CreateDbContext();
+        MockNode.Create(out var A);
+        MockNode.Create(out var B);
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => context.Nodes.AddAfter(A, B));
+    }
+
+    /// <summary>
+    /// |- A     => |- A
+    ///             \- A
+    /// </summary>
+    [Fact]
+    public void AddBefore_PreviouslyAdded_Throws()
+    {
+        // Arrange
+        using var context = factory.CreateDbContext();
+        MockNode.Create(out var A);
+        context.Nodes.AddChild(A);
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => context.Nodes.AddBefore(A));
+    }
+
+    /// <summary>
     /// |- A     => |- A
     /// |  |- A1    |  |- A1
     /// |  \- A2    |  |- A1_2
@@ -115,8 +144,9 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
     ///             \- B
     /// </summary>
     [Fact]
-    public async Task AddBefore_NextToNodeWithOtherSiblings_CorrectPositions()
+    public async Task AddBefore_BeforeNodeWithOtherSiblings_ValidHierarchy()
     {
+        // Arrange
         using (var context = factory.CreateDbContext())
         {
             MockNode.Create(out var A);
@@ -129,7 +159,7 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
             context.Nodes.AddChild(A2, A);
             await context.SaveChangesAsync();
         }
-
+        // Act
         using (var context = factory.CreateDbContext())
         {
             TreeAssert.Single(context.Nodes, out var A2);
@@ -137,7 +167,7 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
             context.Nodes.AddBefore(A1_2, A2);
             await context.SaveChangesAsync();
         }
-
+        // Assert
         using (var context = factory.CreateDbContext())
         {
             TreeAssert.Single(context.Nodes, out var A);
@@ -156,23 +186,15 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
         }
     }
 
-    [Fact]
-    public void AddBefore_PreviouslyAddedNode_Throws()
-    {
-        using var context = factory.CreateDbContext();
-        MockNode.Create(out var A);
-        context.Nodes.AddChild(A);
-        Assert.Throws<ArgumentException>(() => context.Nodes.AddBefore(A));
-    }
-
     /// <summary>
     /// \- B     => |- A
     ///    \- B1    \- B
     ///                \- B1
     /// </summary>
     [Fact]
-    public async Task AddBefore_Root_CorrectPositions()
+    public async Task AddBefore_BeforeRoot_ValidHierarchy()
     {
+        // Arrange
         using (var context = factory.CreateDbContext())
         {
             MockNode.Create(out var B);
@@ -181,14 +203,14 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
             context.Nodes.AddChild(B1, B);
             await context.SaveChangesAsync();
         }
-
+        // Act
         using (var context = factory.CreateDbContext())
         {
             MockNode.Create(out var A);
             context.Nodes.AddBefore(A);
             await context.SaveChangesAsync();
         }
-
+        // Assert
         using (var context = factory.CreateDbContext())
         {
             TreeAssert.Single(context.Nodes, out var A);
@@ -202,15 +224,25 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
         }
     }
 
+    /// <summary>
+    ///          => |- A
+    ///             \- B
+    /// </summary>
     [Fact]
-    public void AddBefore_ToPreviouslyNotAddedSibling_Throws()
+    public void AddBefore_BeforeNodeNotPreviouslyAdded_Throws()
     {
+        // Arrange
         using var context = factory.CreateDbContext();
         MockNode.Create(out var A);
         MockNode.Create(out var B);
+        // Act & Assert
         Assert.Throws<ArgumentException>(() => context.Nodes.AddBefore(A, B));
     }
 
+    /// <summary>
+    /// |- A     => |- A
+    ///             \- A
+    /// </summary>
     [Fact]
     public void AddChild_PreviouslyAddedNode_Throws()
     {
@@ -225,7 +257,7 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
     ///            \- A1
     /// </summary>
     [Fact]
-    public async Task AddChild_ToParent_CorrectPositions()
+    public async Task AddChild_ToParent_ValidHierarchy()
     {
         using (var context = factory.CreateDbContext())
         {
@@ -257,7 +289,7 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
     ///                \- A2
     /// </summary>
     [Fact]
-    public async Task AddChild_ToParentWithChildren_CorrectPositions()
+    public async Task AddChild_ToParentWithChildren_ValidHierarchy()
     {
         using (var context = factory.CreateDbContext())
         {
@@ -296,7 +328,7 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
     ///             \- B
     /// </summary>
     [Fact]
-    public async Task AddChild_ToParentWithChildrenAndSiblings_CorrectPositions()
+    public async Task AddChild_ToParentWithChildrenAndSiblings_ValidHierarchy()
     {
         using (var context = factory.CreateDbContext())
         {
@@ -332,8 +364,12 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
         }
     }
 
+    /// <summary>
+    ///          => |- A
+    ///             \- B
+    /// </summary>
     [Fact]
-    public void AddChild_ToPreviouslyNotAddedParent_Throws()
+    public void AddChild_ToParentPreviouslyNotAdded_Throws()
     {
         using var context = factory.CreateDbContext();
         MockNode.Create(out var A);
@@ -345,7 +381,7 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
     ///     => \- A
     /// </summary>
     [Fact]
-    public async Task AddChild_ToRoot_CorrectPositions()
+    public async Task AddChild_ToRoot_ValidHierarchy()
     {
         // Arrange
         using (var context = factory.CreateDbContext())
@@ -373,7 +409,7 @@ public class AddingTests(ITestOutputHelper output) : IDisposable
     ///         \- B
     /// </summary>
     [Fact]
-    public async Task AddChild_ToRootWithChildren_CorrectPositions()
+    public async Task AddChild_ToRootWithChildren_ValidHierarchy()
     {
         // Arrange
         using (var context = factory.CreateDbContext())
