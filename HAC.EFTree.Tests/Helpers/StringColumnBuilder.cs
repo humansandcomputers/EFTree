@@ -2,16 +2,22 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Xunit.Abstractions;
+using System.Text;
 
-static class TestOutputHelperExtensions
+class StringColumnBuilder
 {
-    static readonly List<string> allColumns = [];
-    public static void AddColumns(this ITestOutputHelper output, params object[] columns)
-        => allColumns.AddRange(columns.Select(x => x.ToString() ?? string.Empty));
+    readonly List<string> allColumns = [];
 
-    public static void WriteColumns(this ITestOutputHelper output, string separator = "\t")
+    public StringColumnBuilder AddColumns(params object[] columns)
     {
+        allColumns.AddRange(columns.Select(x => x.ToString() ?? string.Empty));
+        return this;
+    }
+
+    public string ToString(string separator = "\t")
+    {
+        StringBuilder builder = new();
+
         // Split into lines
         var lines = allColumns.Select(x => x.Replace("\r\n", "\n").Split('\n')).ToArray();
 
@@ -25,8 +31,10 @@ static class TestOutputHelperExtensions
         for (var row = 0; row < maxLines; row++)
         {
             var parts = lines.Select((x, i) => (x.ElementAtOrDefault(row) ?? string.Empty).PadRight(widths[i]));
-            output.WriteLine(string.Join(separator, parts));
+            builder.AppendLine(string.Join(separator, parts));
         }
-        allColumns.Clear();
+        return builder.ToString();
     }
+
+    public override string ToString() => ToString("\t");
 }

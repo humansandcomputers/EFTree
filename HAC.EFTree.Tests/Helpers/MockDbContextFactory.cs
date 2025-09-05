@@ -3,15 +3,16 @@ namespace HAC.EFTree.Tests.Helpers;
 
 class MockDbContextFactory(ITestOutputHelper output) : IDbContextFactory<MockDbContext>, IDisposable
 {
+    readonly StringColumnBuilder stringColumnBuilder = new();
     readonly DbContextOptions<MockDbContext> options = new DbContextOptionsBuilder<MockDbContext>()
          .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
 
-    public MockDbContext CreateDbContext() => new(options, output);
+    public MockDbContext CreateDbContext() => new(options, stringColumnBuilder);
 
-    public void Dispose() => output.WriteColumns();
+    public void Dispose() => output.WriteLine(stringColumnBuilder.ToString());
 }
 
-class MockDbContext(DbContextOptions<MockDbContext> options, ITestOutputHelper output) : DbContext(options)
+class MockDbContext(DbContextOptions<MockDbContext> options, StringColumnBuilder output) : DbContext(options)
 {
     public DbSet<MockNode> Nodes { get; set; }
 
