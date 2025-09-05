@@ -1,8 +1,11 @@
-﻿namespace HAC.EFTree.Tests;
+﻿using Xunit.Abstractions;
 
-public class MovingTests
+namespace HAC.EFTree.Tests;
+
+public class MovingTests(ITestOutputHelper output) : IDisposable
 {
-    readonly DbContextFactory<MockDbContext> factory = new();
+    readonly MockDbContextFactory factory = new(output);
+    public void Dispose() => factory.Dispose();
 
     /// <summary>
     /// |- A     => |- A

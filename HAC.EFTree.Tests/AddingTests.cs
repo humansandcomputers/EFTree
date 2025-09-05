@@ -2,11 +2,13 @@
 
 using HAC.EFTree.Tests.Helpers;
 using System;
+using System.Diagnostics;
 using Xunit.Abstractions;
 
-public class AddingTests(ITestOutputHelper output)
+public class AddingTests(ITestOutputHelper output) : IDisposable
 {
-    readonly DbContextFactory<MockDbContext> factory = new();
+    readonly MockDbContextFactory factory = new(output);
+    public void Dispose() => factory.Dispose();
 
     /// <summary>
     ///     => \- A
@@ -17,7 +19,6 @@ public class AddingTests(ITestOutputHelper output)
         // Arrange
         using (var context = factory.CreateDbContext())
         {
-            output.AddColumns(context);
         }
 
         // Act
@@ -26,8 +27,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A);
             context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
-            output.WriteColumns();
         }
 
         // Assert
@@ -51,7 +50,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A);
             context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
         }
 
         // Act
@@ -60,8 +58,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var B);
             context.Nodes.AddChild(B);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
-            output.WriteColumns();
         }
 
         // Assert
@@ -87,7 +83,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A);
             context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
         }
 
         using (var context = factory.CreateDbContext())
@@ -96,8 +91,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A1);
             context.Nodes.AddChild(A1, A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
-            output.WriteColumns();
         }
 
         using (var context = factory.CreateDbContext())
@@ -124,7 +117,6 @@ public class AddingTests(ITestOutputHelper output)
             context.Nodes.AddChild(A);
             context.Nodes.AddChild(A1, A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
         }
 
         using (var context = factory.CreateDbContext())
@@ -133,8 +125,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A2);
             context.Nodes.AddChild(A2, A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
-            output.WriteColumns();
         }
 
         using (var context = factory.CreateDbContext())
@@ -168,7 +158,6 @@ public class AddingTests(ITestOutputHelper output)
             context.Nodes.AddChild(B);
             context.Nodes.AddChild(A1, A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
         }
 
         using (var context = factory.CreateDbContext())
@@ -177,8 +166,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A2);
             context.Nodes.AddChild(A2, A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
-            output.WriteColumns();
         }
 
         using (var context = factory.CreateDbContext())
@@ -211,7 +198,6 @@ public class AddingTests(ITestOutputHelper output)
             context.Nodes.AddChild(B);
             context.Nodes.AddChild(B1, B);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
         }
 
         using (var context = factory.CreateDbContext())
@@ -219,8 +205,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A);
             context.Nodes.AddBefore(A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
-            output.WriteColumns();
         }
 
         using (var context = factory.CreateDbContext())
@@ -257,7 +241,6 @@ public class AddingTests(ITestOutputHelper output)
             context.Nodes.AddChild(A1, A);
             context.Nodes.AddChild(A2, A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
         }
 
         using (var context = factory.CreateDbContext())
@@ -266,8 +249,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A1_2);
             context.Nodes.AddBefore(A1_2, A2);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
-            output.WriteColumns();
         }
 
         using (var context = factory.CreateDbContext())
@@ -300,7 +281,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A);
             context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
         }
 
         using (var context = factory.CreateDbContext())
@@ -308,8 +288,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var B);
             context.Nodes.AddAfter(B);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
-            output.WriteColumns();
         }
 
         using (var context = factory.CreateDbContext())
@@ -343,7 +321,6 @@ public class AddingTests(ITestOutputHelper output)
             context.Nodes.AddChild(A1, A);
             context.Nodes.AddChild(A2, A);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
         }
 
         using (var context = factory.CreateDbContext())
@@ -352,8 +329,6 @@ public class AddingTests(ITestOutputHelper output)
             MockNode.Create(out var A1_2);
             context.Nodes.AddAfter(A1_2, A1);
             await context.SaveChangesAsync();
-            output.AddColumns(context);
-            output.WriteColumns();
         }
 
         using (var context = factory.CreateDbContext())
@@ -372,8 +347,6 @@ public class AddingTests(ITestOutputHelper output)
             TreeAssert.Siblings(A, B);
             TreeAssert.Siblings(A1, A1_2, A2);
         }
-
-        output.WriteColumns();
     }
 
     [Fact]
