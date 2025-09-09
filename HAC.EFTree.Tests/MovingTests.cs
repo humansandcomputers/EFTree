@@ -6,6 +6,8 @@ public class MovingTests(ITestOutputHelper output) : IDisposable
 {
     readonly MockDbContextFactory factory = new(output);
 
+    public void Dispose() => factory.Dispose();
+
     /// <summary>
     /// |- A     => |- A
     ///    \- X     \- X
@@ -45,7 +47,7 @@ public class MovingTests(ITestOutputHelper output) : IDisposable
     /// \- X        \- X 
     /// </summary>
     [Fact]
-    public async Task Move_FromRootToParent_ValidHierarchy()
+    public async Task Move_FromRootAfterToParent_ValidHierarchy()
     {
         // Arrange
         using (var context = factory.CreateDbContext())
@@ -54,6 +56,41 @@ public class MovingTests(ITestOutputHelper output) : IDisposable
             MockNode.Create(out var X);
             context.Nodes.AddChild(A);
             context.Nodes.AddChild(X);
+            await context.SaveChangesAsync();
+        }
+        // Act
+        using (var context = factory.CreateDbContext())
+        {
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var X);
+            context.Nodes.Move(X, A);
+            await context.SaveChangesAsync();
+        }
+        // Assert
+        using (var context = factory.CreateDbContext())
+        {
+            TreeAssert.Single(context.Nodes, out var A);
+            TreeAssert.Single(context.Nodes, out var X);
+            TreeAssert.Node(A);
+            TreeAssert.Node(X);
+            TreeAssert.Child(X, A);
+        }
+    }
+
+    /// <summary>
+    /// |- X  => |- A     
+    /// \- A        \- X 
+    /// </summary>
+    [Fact]
+    public async Task Move_FromRootBehindToParent_ValidHierarchy()
+    {
+        // Arrange
+        using (var context = factory.CreateDbContext())
+        {
+            MockNode.Create(out var X);
+            MockNode.Create(out var A);
+            context.Nodes.AddChild(X);
+            context.Nodes.AddChild(A);
             await context.SaveChangesAsync();
         }
         // Act
@@ -143,7 +180,6 @@ public class MovingTests(ITestOutputHelper output) : IDisposable
         }
     }
 
-
     /// <summary>
     /// |- A       	|- A       
     /// |- B       	|- B       
@@ -211,6 +247,4 @@ public class MovingTests(ITestOutputHelper output) : IDisposable
             TreeAssert.Siblings(B1, X);
         }
     }
-
-    public void Dispose() => factory.Dispose();
 }

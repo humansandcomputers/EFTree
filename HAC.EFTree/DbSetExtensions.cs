@@ -1,10 +1,8 @@
 ﻿using HAC.EFTree.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using System.Drawing;
+using Microsoft.EntityFrameworkCore.Query;
 using System.Linq.Expressions;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Xml;
 
 namespace HAC.EFTree;
 
@@ -28,18 +26,29 @@ public static class DbSetExtensions
         var min = Math.Min(start, end);
         var max = Math.Max(start, end);
 
-        Expression<Func<T, bool>> leftExpression = x => min <= x.Left && x.Left < max;
-        var leftFunc = leftExpression.Compile();
-        var lefts = set.Where(leftExpression).AsEnumerable().Concat(set.Local.Where(leftFunc)).Distinct();
-        foreach (var x in lefts)
+        foreach (var x in set.WhereAll(x => min <= x.Left && x.Left < max).Distinct())
             x.Left += offset;
 
-        Expression<Func<T, bool>> rightExpression = x => min <= x.Right && x.Right < max;
-        var rightFunc = rightExpression.Compile();
-        var rights = set.Where(rightExpression).AsEnumerable().Concat(set.Local.Where(rightFunc)).Distinct();
-        foreach (var x in rights)
+        foreach (var x in set.WhereAll(x => min <= x.Right && x.Right < max).Distinct())
             x.Right += offset;
     }
+
+    static Expression<Func<T, bool>> GetExpression<T>(bool right, long? a = default, long? b = default)
+        where T : Node
+        => (a, b) switch
+        {
+            (not null, null) when right => x => a.Value <= x.Right,
+            (not null, null) => x => a.Value <= x.Left,
+            (null, not null) when right => x => x.Right < b.Value,
+            (null, not null) => x => x.Left < b.Value,
+            (not null, not null) when right => x => a.Value <= x.Right && x.Right < b.Value,
+            (not null, not null) => x => a.Value <= x.Left && x.Left < b.Value,
+            _ => throw new ArgumentException($"Both {nameof(a)} and {nameof(b)} could not be null.")
+        };
+
+    static IEnumerable<T> WhereAll<T>(this DbSet<T> set, Expression<Func<T, bool>> expression)
+        where T : Node
+        => set.Where(expression).AsEnumerable().Concat(set.Local.Where(expression.Compile()));
 
     static void Add<T>(this DbSet<T> set, T node, long start)
         where T : Node
@@ -103,35 +112,14 @@ public static class DbSetExtensions
         set.Add(node, start);
     }
 
-    /*
-    0   7     10      14    17  19
-        L__S__R       L__T__R
-        |-----||===========|
-         hole      patch
-               L______T_____R
-                     L__S__R
-        |===========||-----|
-            patch      hole
-
-    0   2     3       7     10  19
-        L__T__R       L__S__R
-              |======||-----|
-               patch   hole
-        L_____T______R
-              L__S__R
-              |-----||======|
-               hole   patch
-     */
     public static void Move<T>(this DbSet<T> set, T node, T? parent = default)
         where T : Node
     {
-        var target = parent?.Right ?? (set.MaxRight() + 1) ?? default;
-        var ts = parent is not null && node.Left > parent.Right ? node.Left : node.Right + 1;
-        var patch = new Span(ts, target);
+        var right = parent?.Right ?? (set.MaxRight() + 1) ?? default;
+        var patch = new Span(right < node.Left ? node.Left : node.Right + 1, right);
         var hole = new Span(node.Left, node.Right + 1);
-        var back = parent is not null && node.Left > parent.Right ? hole.Length : -hole.Length;
         set.Shift(hole.Start, hole.End, -hole.End);
-        set.Shift(patch.Start, patch.End, back);
+        set.Shift(patch.Start, patch.End, hole.Length * Math.Sign(patch.Start - patch.End));
         set.Shift(hole.Start - hole.End, 0, hole.End + patch.Length);
     }
 
