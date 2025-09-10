@@ -10,7 +10,9 @@ public class NodeTests(ITestOutputHelper output)
     public async Task Add_SetSafeAdd_Adds()
     {
         var context = factory.CreateDbContext();
-        context.Nodes.Add(new MockNode() { Name = "A", SafeAdd = true });
+        MockNode A = new() { Name = "A" };
+        A.Added();
+        context.Nodes.Add(A);
         await context.SaveChangesAsync();
         Assert.NotNull(context.Nodes.FirstOrDefault());
     }

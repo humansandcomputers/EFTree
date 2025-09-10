@@ -1,6 +1,5 @@
 ﻿using HAC.EFTree.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 
@@ -23,13 +22,10 @@ public static class DbSetExtensions
     static void Shift<T>(this DbSet<T> set, long start, long end, long offset)
         where T : Node
     {
-        var min = Math.Min(start, end);
-        var max = Math.Max(start, end);
-
-        foreach (var x in set.WhereAll(x => min <= x.Left && x.Left < max).Distinct())
+        foreach (var x in set.WhereAll(x => start <= x.Left && x.Left < end).Distinct())
             x.Left += offset;
 
-        foreach (var x in set.WhereAll(x => min <= x.Right && x.Right < max).Distinct())
+        foreach (var x in set.WhereAll(x => start <= x.Right && x.Right < end).Distinct())
             x.Right += offset;
     }
 
@@ -37,12 +33,12 @@ public static class DbSetExtensions
         where T : Node
         => (a, b) switch
         {
-            (not null, null) when right => x => a.Value <= x.Right,
-            (not null, null) => x => a.Value <= x.Left,
-            (null, not null) when right => x => x.Right < b.Value,
-            (null, not null) => x => x.Left < b.Value,
-            (not null, not null) when right => x => a.Value <= x.Right && x.Right < b.Value,
-            (not null, not null) => x => a.Value <= x.Left && x.Left < b.Value,
+            (not null, null) => right ? x => a.Value <= x.Right
+                                      : x => a.Value <= x.Left,
+            (null, not null) => right ? x => x.Right < b.Value
+                                      : x => x.Left < b.Value,
+            (not null, not null) => right ? x => a.Value <= x.Right && x.Right < b.Value :
+                                            x => a.Value <= x.Left && x.Left < b.Value,
             _ => throw new ArgumentException($"Both {nameof(a)} and {nameof(b)} could not be null.")
         };
 
@@ -56,7 +52,7 @@ public static class DbSetExtensions
         set.Shift(start, 2);
         node.Left = start;
         node.Right = node.Left + 1;
-        node.SafeAdd = true;
+        node.Added();
         set.Add(node);
     }
 
@@ -118,13 +114,67 @@ public static class DbSetExtensions
         var right = parent?.Right ?? (set.MaxRight() + 1) ?? default;
         var patch = new Span(right < node.Left ? node.Left : node.Right + 1, right);
         var hole = new Span(node.Left, node.Right + 1);
-        set.Shift(hole.Start, hole.End, -hole.End);
-        set.Shift(patch.Start, patch.End, hole.Length * Math.Sign(patch.Start - patch.End));
-        set.Shift(hole.Start - hole.End, 0, hole.End + patch.Length);
+        var rtl = node.Right < right;
+        var holeMove = rtl ? patch.Length : -patch.Length;
+        var patchMove = rtl ? -hole.Length : hole.Length;
+        set.Shift(hole.Start, hole.End, true, holeMove, false);
+        set.Shift(patch.Start, patch.End, true, patchMove, true);
+        set.Shift(hole.Start, hole.End, false, null, true);
     }
 
-    record Span(long Start, long End)
+    static void Shift<T>(this DbSet<T> set, long? start, long? end, bool? registered, long? offset, bool? add)
+        where T : Node
     {
-        public long Length => End - Start;
+        set.ForAll(start, end, registered, (right, x) =>
+        {
+            if (offset.HasValue)
+                if (right)
+                    x.Right += offset.Value;
+                else
+                    x.Left += offset.Value;
+            if (add.HasValue)
+                if (add.Value)
+                    x.Added();
+                else
+                    x.Removed();
+        });
+        //set.WhereAll(x => start <= x.Left && x.Left < end && x.SafeAdd == registered).Distinct().ToList().ForEach(x =>
+        //{
+        //    if (offset.HasValue)
+        //        x.Left += offset.Value;
+        //    if (add.HasValue)
+        //        if (add.Value)
+        //            x.Added();
+        //        else
+        //            x.Removed();
+
+        //});
+        //set.WhereAll(x => start <= x.Right && x.Right < end && x.SafeAdd == registered).Distinct().ToList().ForEach(x =>
+        //{
+        //    if (offset.HasValue)
+        //        x.Right += offset.Value;
+        //    if (add.HasValue)
+        //        if (add.Value)
+        //            x.Added();
+        //        else
+        //            x.Removed();
+        //});
+    }
+
+    static void ForAll<T>(this DbSet<T> set, long? start, long? end, bool? registered, Action<bool, T> action)
+        where T : Node
+    {
+        foreach (var x in set.WhereAll(x => start <= x.Left && x.Left < end && x.SafeAdd == registered).Distinct())
+            action(false, x);
+
+        foreach (var x in set.WhereAll(x => start <= x.Right && x.Right < end && x.SafeAdd == registered).Distinct())
+            action(true, x);
+    }
+
+    class Span(long a, long b)
+    {
+        public long Start { get; } = Math.Min(a, b);
+        public long End { get; } = Math.Max(a, b);
+        public long Length { get; } = Math.Abs(b - a);
     }
 }
