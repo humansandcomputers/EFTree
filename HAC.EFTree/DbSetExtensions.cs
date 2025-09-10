@@ -1,6 +1,7 @@
 ﻿using HAC.EFTree.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 
 namespace HAC.EFTree;
@@ -117,58 +118,65 @@ public static class DbSetExtensions
         var rtl = node.Right < right;
         var holeMove = rtl ? patch.Length : -patch.Length;
         var patchMove = rtl ? -hole.Length : hole.Length;
-        set.Shift(hole.Start, hole.End, true, holeMove, false);
-        set.Shift(patch.Start, patch.End, true, patchMove, true);
-        set.Shift(hole.Start, hole.End, false, null, true);
+        set.UnRegisterAll(hole.Start, hole.End);
+        set.Shift(hole.Start, hole.End, null, holeMove);
+        set.Shift(patch.Start, patch.End, true, patchMove);
+        set.RegisterAll(hole.Start, hole.End);
     }
 
-    static void Shift<T>(this DbSet<T> set, long? start, long? end, bool? registered, long? offset, bool? add)
+    static void Shift<T>(this DbSet<T> set, long? start, long? end, bool? registered, long offset)
         where T : Node
     {
-        set.ForAll(start, end, registered, (right, x) =>
+        set.UpdateAll((right, x) =>
         {
-            if (offset.HasValue)
-                if (right)
-                    x.Right += offset.Value;
-                else
-                    x.Left += offset.Value;
-            if (add.HasValue)
-                if (add.Value)
-                    x.Added();
-                else
-                    x.Removed();
-        });
-        //set.WhereAll(x => start <= x.Left && x.Left < end && x.SafeAdd == registered).Distinct().ToList().ForEach(x =>
-        //{
-        //    if (offset.HasValue)
-        //        x.Left += offset.Value;
-        //    if (add.HasValue)
-        //        if (add.Value)
-        //            x.Added();
-        //        else
-        //            x.Removed();
-
-        //});
-        //set.WhereAll(x => start <= x.Right && x.Right < end && x.SafeAdd == registered).Distinct().ToList().ForEach(x =>
-        //{
-        //    if (offset.HasValue)
-        //        x.Right += offset.Value;
-        //    if (add.HasValue)
-        //        if (add.Value)
-        //            x.Added();
-        //        else
-        //            x.Removed();
-        //});
+            if (right)
+                x.Right += offset;
+            else
+                x.Left += offset;
+        }, start, end, registered);
     }
 
-    static void ForAll<T>(this DbSet<T> set, long? start, long? end, bool? registered, Action<bool, T> action)
+    static void RegisterAll<T>(this DbSet<T> set, long? start, long? end)
+        where T : Node => set.UpdateAll((_, x) => x.Added(), start, end);
+
+    static void UnRegisterAll<T>(this DbSet<T> set, long? start, long? end)
+        where T : Node => set.UpdateAll((_, x) => x.Removed(), start, end);
+
+    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, long? start, long? end, bool? registered = default)
         where T : Node
     {
-        foreach (var x in set.WhereAll(x => start <= x.Left && x.Left < end && x.SafeAdd == registered).Distinct())
+        foreach (var x in set.WhereAll(GetRangeExpression<T>(false, start, end, registered)).Distinct())
             action(false, x);
 
-        foreach (var x in set.WhereAll(x => start <= x.Right && x.Right < end && x.SafeAdd == registered).Distinct())
+        foreach (var x in set.WhereAll(GetRangeExpression<T>(true, start, end, registered)).Distinct())
             action(true, x);
+    }
+
+    static Expression<Func<T, bool>> GetRangeExpression<T>(bool right, long? a = default, long? b = default, bool? registered = default)
+        where T : Node
+    {
+        if (registered is not null)
+            return (a, b) switch
+            {
+                (not null, null) => right ? x => a.Value <= x.Right && x.SafeAdd == registered
+                                          : x => a.Value <= x.Left && x.SafeAdd == registered,
+                (null, not null) => right ? x => x.Right < b.Value && x.SafeAdd == registered
+                                          : x => x.Left < b.Value && x.SafeAdd == registered && x.SafeAdd == registered,
+                (not null, not null) => right ? x => a.Value <= x.Right && x.Right < b.Value && x.SafeAdd == registered :
+                                                x => a.Value <= x.Left && x.Left < b.Value && x.SafeAdd == registered,
+                _ => throw new ArgumentException($"Both {nameof(a)} and {nameof(b)} could not be null.")
+            };
+
+        return (a, b) switch
+        {
+            (not null, null) => right ? x => a.Value <= x.Right
+                                      : x => a.Value <= x.Left,
+            (null, not null) => right ? x => x.Right < b.Value
+                                      : x => x.Left < b.Value,
+            (not null, not null) => right ? x => a.Value <= x.Right && x.Right < b.Value :
+                                            x => a.Value <= x.Left && x.Left < b.Value,
+            _ => throw new ArgumentException($"Both {nameof(a)} and {nameof(b)} could not be null.")
+        };
     }
 
     class Span(long a, long b)
