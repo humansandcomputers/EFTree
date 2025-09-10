@@ -20,32 +20,9 @@ public static class DbSetExtensions
             x.Right += offset;
     }
 
-    static void Shift<T>(this DbSet<T> set, long start, long end, long offset)
+    static IEnumerable<T> WhereAll<T>(this DbSet<T> set, Expression<Func<T, bool>> predicate)
         where T : Node
-    {
-        foreach (var x in set.WhereAll(x => start <= x.Left && x.Left < end).Distinct())
-            x.Left += offset;
-
-        foreach (var x in set.WhereAll(x => start <= x.Right && x.Right < end).Distinct())
-            x.Right += offset;
-    }
-
-    static Expression<Func<T, bool>> GetExpression<T>(bool right, long? a = default, long? b = default)
-        where T : Node
-        => (a, b) switch
-        {
-            (not null, null) => right ? x => a.Value <= x.Right
-                                      : x => a.Value <= x.Left,
-            (null, not null) => right ? x => x.Right < b.Value
-                                      : x => x.Left < b.Value,
-            (not null, not null) => right ? x => a.Value <= x.Right && x.Right < b.Value :
-                                            x => a.Value <= x.Left && x.Left < b.Value,
-            _ => throw new ArgumentException($"Both {nameof(a)} and {nameof(b)} could not be null.")
-        };
-
-    static IEnumerable<T> WhereAll<T>(this DbSet<T> set, Expression<Func<T, bool>> expression)
-        where T : Node
-        => set.Where(expression).AsEnumerable().Concat(set.Local.Where(expression.Compile()));
+        => set.Where(predicate).AsEnumerable().Concat(set.Local.Where(predicate.Compile()));
 
     static void Add<T>(this DbSet<T> set, T node, long start)
         where T : Node
@@ -53,7 +30,7 @@ public static class DbSetExtensions
         set.Shift(start, 2);
         node.Left = start;
         node.Right = node.Left + 1;
-        node.Added();
+        node.Register();
         set.Add(node);
     }
 
@@ -119,63 +96,57 @@ public static class DbSetExtensions
         var holeMove = rtl ? patch.Length : -patch.Length;
         var patchMove = rtl ? -hole.Length : hole.Length;
         set.UnRegisterAll(hole.Start, hole.End);
-        set.Shift(hole.Start, hole.End, null, holeMove);
-        set.Shift(patch.Start, patch.End, true, patchMove);
+        set.Shift(holeMove, hole.Start, hole.End, null);
+        set.Shift(patchMove, patch.Start, patch.End, true);
         set.RegisterAll(hole.Start, hole.End);
     }
 
-    static void Shift<T>(this DbSet<T> set, long? start, long? end, bool? registered, long offset)
-        where T : Node
-    {
-        set.UpdateAll((right, x) =>
-        {
-            if (right)
-                x.Right += offset;
-            else
-                x.Left += offset;
-        }, start, end, registered);
-    }
+    static void Shift<T>(this DbSet<T> set, long offset, long? start, long? end, bool? registered = default)
+        where T : Node => set.UpdateAll((right, x) => x.SetOffset(offset, right), start, end, registered);
 
     static void RegisterAll<T>(this DbSet<T> set, long? start, long? end)
-        where T : Node => set.UpdateAll((_, x) => x.Added(), start, end);
+        where T : Node => set.UpdateAll((_, x) => x.Register(), start, end);
 
     static void UnRegisterAll<T>(this DbSet<T> set, long? start, long? end)
-        where T : Node => set.UpdateAll((_, x) => x.Removed(), start, end);
+        where T : Node => set.UpdateAll((_, x) => x.UnRegister(), start, end);
 
-    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, long? start, long? end, bool? registered = default)
+    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, long? start = default, long? end = default, bool? registered = default)
+        where T : Node => set.UpdateAll(action, right => GetRangeExpression<T>(right, start, end, registered));
+
+    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, Func<bool, Expression<Func<T, bool>>> predicate)
         where T : Node
     {
-        foreach (var x in set.WhereAll(GetRangeExpression<T>(false, start, end, registered)).Distinct())
+        foreach (var x in set.WhereAll(predicate(false)).Distinct())
             action(false, x);
 
-        foreach (var x in set.WhereAll(GetRangeExpression<T>(true, start, end, registered)).Distinct())
+        foreach (var x in set.WhereAll(predicate(true)).Distinct())
             action(true, x);
     }
 
-    static Expression<Func<T, bool>> GetRangeExpression<T>(bool right, long? a = default, long? b = default, bool? registered = default)
+    static Expression<Func<T, bool>> GetRangeExpression<T>(bool right, long? start = default, long? end = default, bool? registered = default)
         where T : Node
     {
         if (registered is not null)
-            return (a, b) switch
+            return (start, end) switch
             {
-                (not null, null) => right ? x => a.Value <= x.Right && x.SafeAdd == registered
-                                          : x => a.Value <= x.Left && x.SafeAdd == registered,
-                (null, not null) => right ? x => x.Right < b.Value && x.SafeAdd == registered
-                                          : x => x.Left < b.Value && x.SafeAdd == registered && x.SafeAdd == registered,
-                (not null, not null) => right ? x => a.Value <= x.Right && x.Right < b.Value && x.SafeAdd == registered :
-                                                x => a.Value <= x.Left && x.Left < b.Value && x.SafeAdd == registered,
-                _ => throw new ArgumentException($"Both {nameof(a)} and {nameof(b)} could not be null.")
+                (not null, null) => right ? x => start.Value <= x.Right && x.SafeAdd == registered
+                                          : x => start.Value <= x.Left && x.SafeAdd == registered,
+                (null, not null) => right ? x => x.Right < end.Value && x.SafeAdd == registered
+                                          : x => x.Left < end.Value && x.SafeAdd == registered && x.SafeAdd == registered,
+                (not null, not null) => right ? x => start.Value <= x.Right && x.Right < end.Value && x.SafeAdd == registered :
+                                                x => start.Value <= x.Left && x.Left < end.Value && x.SafeAdd == registered,
+                _ => throw new ArgumentException($"Both {nameof(start)} and {nameof(end)} could not be null.")
             };
 
-        return (a, b) switch
+        return (start, end) switch
         {
-            (not null, null) => right ? x => a.Value <= x.Right
-                                      : x => a.Value <= x.Left,
-            (null, not null) => right ? x => x.Right < b.Value
-                                      : x => x.Left < b.Value,
-            (not null, not null) => right ? x => a.Value <= x.Right && x.Right < b.Value :
-                                            x => a.Value <= x.Left && x.Left < b.Value,
-            _ => throw new ArgumentException($"Both {nameof(a)} and {nameof(b)} could not be null.")
+            (not null, null) => right ? x => start.Value <= x.Right
+                                      : x => start.Value <= x.Left,
+            (null, not null) => right ? x => x.Right < end.Value
+                                      : x => x.Left < end.Value,
+            (not null, not null) => right ? x => start.Value <= x.Right && x.Right < end.Value :
+                                            x => start.Value <= x.Left && x.Left < end.Value,
+            _ => throw new ArgumentException($"Both {nameof(start)} and {nameof(end)} could not be null.")
         };
     }
 

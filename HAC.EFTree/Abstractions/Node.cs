@@ -20,6 +20,13 @@ public abstract class Node
         SafeAdd = true;
     }
 
-    internal void Removed() => SafeAdd = null;
-    internal void Added() => SafeAdd = true;
+    internal void UnRegister() => SafeAdd = null;
+    internal void Register() => SafeAdd = true;
+    internal void SetOffset(long offset, bool right)
+    {
+        if (right)
+            Right += offset;
+        else
+            Left += offset;
+    }
 }

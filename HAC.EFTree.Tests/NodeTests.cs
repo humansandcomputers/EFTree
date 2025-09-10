@@ -11,7 +11,7 @@ public class NodeTests(ITestOutputHelper output)
     {
         var context = factory.CreateDbContext();
         MockNode A = new() { Name = "A" };
-        A.Added();
+        A.Register();
         context.Nodes.Add(A);
         await context.SaveChangesAsync();
         Assert.NotNull(context.Nodes.FirstOrDefault());
