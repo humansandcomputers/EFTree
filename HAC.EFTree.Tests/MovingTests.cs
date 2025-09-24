@@ -2,7 +2,7 @@
 
 namespace HAC.EFTree.Tests;
 
-public class MovingTests(ITestOutputHelper output) : IDisposable
+public sealed class MovingTests(ITestOutputHelper output) : IDisposable
 {
     readonly MockDbContextFactory factory = new(output);
 

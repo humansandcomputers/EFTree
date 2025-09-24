@@ -13,12 +13,6 @@ public abstract class Node
     [Required] public bool? SafeAdd { get; private set; }
 
     public Node() { }
-    internal Node(long position)
-    {
-        Left = position;
-        Right = position + 1;
-        SafeAdd = true;
-    }
 
     internal void UnRegister() => SafeAdd = null;
     internal void Register() => SafeAdd = true;
@@ -28,5 +22,10 @@ public abstract class Node
             Right += offset;
         else
             Left += offset;
+    }
+    internal void SetPosition(long position)
+    {
+        Left = position;
+        Right = position + 1;
     }
 }

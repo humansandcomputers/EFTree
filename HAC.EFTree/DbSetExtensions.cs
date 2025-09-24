@@ -8,29 +8,6 @@ namespace HAC.EFTree;
 
 public static class DbSetExtensions
 {
-    static IEnumerable<T> WhereAll<T>(this DbSet<T> set, Expression<Func<T, bool>> predicate)
-        where T : Node
-        => set.Where(predicate).AsEnumerable().Concat(set.Local.Where(predicate.Compile()));
-
-    static void Shift<T>(this DbSet<T> set, long offset, long? start = default, long? end = default, bool? registered = default)
-        where T : Node => set.UpdateAll((right, x) => x.SetOffset(offset, right), start, end, registered);
-
-    static void UpdateAll<T>(this DbSet<T> set, Action<T> action, long? start = default, long? end = default, bool? registered = default)
-        where T : Node => set.UpdateAll((_, x) => action(x), start, end, registered);
-
-    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, long? start = default, long? end = default, bool? registered = default)
-        where T : Node => set.UpdateAll(action, right => GetRangeExpression<T>(right, start, end, registered));
-
-    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, Func<bool, Expression<Func<T, bool>>> predicate)
-        where T : Node
-    {
-        foreach (var x in set.WhereAll(predicate(false)).Distinct())
-            action(false, x);
-
-        foreach (var x in set.WhereAll(predicate(true)).Distinct())
-            action(true, x);
-    }
-
     static Expression<Func<T, bool>> GetRangeExpression<T>(bool right, long? start = default, long? end = default, bool? registered = default)
         where T : Node
     {
@@ -53,24 +30,26 @@ public static class DbSetExtensions
         return Expression.Lambda<Func<T, bool>>(all.Aggregate(Expression.And), param);
     }
 
-    static void Add<T>(this DbSet<T> set, T node, long start)
-        where T : Node
+    static IEnumerable<T> WhereAll<T>(this DbSet<T> set, Expression<Func<T, bool>> predicate) where T : Node
+        => set.Where(predicate).AsEnumerable().Concat(set.Local.Where(predicate.Compile()));
+
+    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, Func<bool, Expression<Func<T, bool>>> predicate) where T : Node
     {
-        set.Shift(2, start);
-        node.Left = start;
-        node.Right = node.Left + 1;
-        node.Register();
-        set.Add(node);
+        foreach (var x in set.WhereAll(predicate(false)).Distinct())
+            action(false, x);
+
+        foreach (var x in set.WhereAll(predicate(true)).Distinct())
+            action(true, x);
     }
 
-    static void ValidateAdd<T>(T node, T? toNode = default, [CallerArgumentExpression(nameof(toNode))] string? name = default)
-        where T : Node
-    {
-        if (node.SafeAdd is true)
-            throw new ArgumentException("Can't add node that has been added previously.");
-        if (toNode is not null && toNode?.SafeAdd is not true)
-            throw new ArgumentException($"Can't add node to a {name} node that is not added yet.");
-    }
+    static void UpdateAll<T>(this DbSet<T> set, Action<T> action, long? start = default, long? end = default, bool? registered = default) where T : Node
+        => set.UpdateAll((_, x) => action(x), start, end, registered);
+
+    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, long? start = default, long? end = default, bool? registered = default) where T : Node
+        => set.UpdateAll(action, right => GetRangeExpression<T>(right, start, end, registered));
+
+    static void Shift<T>(this DbSet<T> set, long offset, long? start = default, long? end = default, bool? registered = default) where T : Node
+        => set.UpdateAll((right, x) => x.SetOffset(offset, right), start, end, registered);
 
     static long? Extremum<T>(this DbSet<T> set, Expression<Func<T?, long?>> expression, bool min)
             where T : Node
@@ -90,6 +69,24 @@ public static class DbSetExtensions
     static long? MaxRight<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Right, false);
 
     static long? MinLeft<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Left, true);
+
+    static void Add<T>(this DbSet<T> set, T node, long start)
+        where T : Node
+    {
+        set.Shift(2, start);
+        node.SetPosition(start);
+        node.Register();
+        set.Add(node);
+    }
+
+    static void ValidateAdd<T>(T node, T? toNode = default, [CallerArgumentExpression(nameof(toNode))] string? name = default)
+        where T : Node
+    {
+        if (node.SafeAdd is true)
+            throw new ArgumentException("Can't add node that has been added previously.");
+        if (toNode is not null && toNode?.SafeAdd is not true)
+            throw new ArgumentException($"Can't add node to a {name} node that is not added yet.");
+    }
 
     public static void AddBefore<T>(this DbSet<T> set, T node, T? sibling = default)
         where T : Node
