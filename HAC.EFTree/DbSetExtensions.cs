@@ -1,33 +1,62 @@
 ﻿using HAC.EFTree.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 
 namespace HAC.EFTree;
 
 public static class DbSetExtensions
 {
-    static void Shift<T>(this DbSet<T> set, long start, long offset)
-        where T : Node
-    {
-        var lefts = set.Where(x => start <= x.Left).AsEnumerable().Concat(set.Local.Where(x => start <= x.Left)).Distinct();
-        foreach (var x in lefts)
-            x.Left += offset;
-
-        var rights = set.Where(x => start <= x.Right).AsEnumerable().Concat(set.Local.Where(x => start <= x.Right)).Distinct();
-        foreach (var x in rights)
-            x.Right += offset;
-    }
-
     static IEnumerable<T> WhereAll<T>(this DbSet<T> set, Expression<Func<T, bool>> predicate)
         where T : Node
         => set.Where(predicate).AsEnumerable().Concat(set.Local.Where(predicate.Compile()));
 
+    static void Shift<T>(this DbSet<T> set, long offset, long? start = default, long? end = default, bool? registered = default)
+        where T : Node => set.UpdateAll((right, x) => x.SetOffset(offset, right), start, end, registered);
+
+    static void UpdateAll<T>(this DbSet<T> set, Action<T> action, long? start = default, long? end = default, bool? registered = default)
+        where T : Node => set.UpdateAll((_, x) => action(x), start, end, registered);
+
+    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, long? start = default, long? end = default, bool? registered = default)
+        where T : Node => set.UpdateAll(action, right => GetRangeExpression<T>(right, start, end, registered));
+
+    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, Func<bool, Expression<Func<T, bool>>> predicate)
+        where T : Node
+    {
+        foreach (var x in set.WhereAll(predicate(false)).Distinct())
+            action(false, x);
+
+        foreach (var x in set.WhereAll(predicate(true)).Distinct())
+            action(true, x);
+    }
+
+    static Expression<Func<T, bool>> GetRangeExpression<T>(bool right, long? start = default, long? end = default, bool? registered = default)
+        where T : Node
+    {
+        var param = Expression.Parameter(typeof(T), "x");
+        var side = Expression.Property(param, right ? nameof(Node.Right) : nameof(Node.Left));
+        var safeAdd = Expression.Property(param, nameof(Node.SafeAdd));
+
+        var all = new List<Expression>();
+        if (start is not null)
+            all.Add(Expression.GreaterThanOrEqual(side, Expression.Constant(start.Value)));
+        if (end is not null)
+            all.Add(Expression.LessThan(side, Expression.Constant(end.Value)));
+        if (registered is not null)
+            all.Add(Expression.Equal(safeAdd, Expression.Constant((bool?)registered.Value, typeof(bool?))));
+
+        if (all.Count is 0)
+            throw new Exception();
+        if (all.Count is 1)
+            return Expression.Lambda<Func<T, bool>>(all.First(), param);
+        return Expression.Lambda<Func<T, bool>>(all.Aggregate(Expression.And), param);
+    }
+
     static void Add<T>(this DbSet<T> set, T node, long start)
         where T : Node
     {
-        set.Shift(start, 2);
+        set.Shift(2, start);
         node.Left = start;
         node.Right = node.Left + 1;
         node.Register();
@@ -95,59 +124,10 @@ public static class DbSetExtensions
         var rtl = node.Right < right;
         var holeMove = rtl ? patch.Length : -patch.Length;
         var patchMove = rtl ? -hole.Length : hole.Length;
-        set.UnRegisterAll(hole.Start, hole.End);
-        set.Shift(holeMove, hole.Start, hole.End, null);
+        set.UpdateAll(x => x.UnRegister(), hole.Start, hole.End);
+        set.Shift(holeMove, hole.Start, hole.End);
         set.Shift(patchMove, patch.Start, patch.End, true);
-        set.RegisterAll(hole.Start, hole.End);
-    }
-
-    static void Shift<T>(this DbSet<T> set, long offset, long? start, long? end, bool? registered = default)
-        where T : Node => set.UpdateAll((right, x) => x.SetOffset(offset, right), start, end, registered);
-
-    static void RegisterAll<T>(this DbSet<T> set, long? start, long? end)
-        where T : Node => set.UpdateAll((_, x) => x.Register(), start, end);
-
-    static void UnRegisterAll<T>(this DbSet<T> set, long? start, long? end)
-        where T : Node => set.UpdateAll((_, x) => x.UnRegister(), start, end);
-
-    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, long? start = default, long? end = default, bool? registered = default)
-        where T : Node => set.UpdateAll(action, right => GetRangeExpression<T>(right, start, end, registered));
-
-    static void UpdateAll<T>(this DbSet<T> set, Action<bool, T> action, Func<bool, Expression<Func<T, bool>>> predicate)
-        where T : Node
-    {
-        foreach (var x in set.WhereAll(predicate(false)).Distinct())
-            action(false, x);
-
-        foreach (var x in set.WhereAll(predicate(true)).Distinct())
-            action(true, x);
-    }
-
-    static Expression<Func<T, bool>> GetRangeExpression<T>(bool right, long? start = default, long? end = default, bool? registered = default)
-        where T : Node
-    {
-        if (registered is not null)
-            return (start, end) switch
-            {
-                (not null, null) => right ? x => start.Value <= x.Right && x.SafeAdd == registered
-                                          : x => start.Value <= x.Left && x.SafeAdd == registered,
-                (null, not null) => right ? x => x.Right < end.Value && x.SafeAdd == registered
-                                          : x => x.Left < end.Value && x.SafeAdd == registered && x.SafeAdd == registered,
-                (not null, not null) => right ? x => start.Value <= x.Right && x.Right < end.Value && x.SafeAdd == registered :
-                                                x => start.Value <= x.Left && x.Left < end.Value && x.SafeAdd == registered,
-                _ => throw new ArgumentException($"Both {nameof(start)} and {nameof(end)} could not be null.")
-            };
-
-        return (start, end) switch
-        {
-            (not null, null) => right ? x => start.Value <= x.Right
-                                      : x => start.Value <= x.Left,
-            (null, not null) => right ? x => x.Right < end.Value
-                                      : x => x.Left < end.Value,
-            (not null, not null) => right ? x => start.Value <= x.Right && x.Right < end.Value :
-                                            x => start.Value <= x.Left && x.Left < end.Value,
-            _ => throw new ArgumentException($"Both {nameof(start)} and {nameof(end)} could not be null.")
-        };
+        set.UpdateAll(x => x.Register(), hole.Start, hole.End);
     }
 
     class Span(long a, long b)
