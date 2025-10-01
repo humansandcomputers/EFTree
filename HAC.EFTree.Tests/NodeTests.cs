@@ -1,18 +1,18 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
-using System.Numerics;
+﻿using Xunit.Abstractions;
 
 namespace HAC.EFTree.Tests;
 
-public class NodeTests
+public class NodeTests(ITestOutputHelper output)
 {
-    readonly DbContextFactory<MockDbContext> factory = new();
+    readonly MockDbContextFactory factory = new(output);
 
     [Fact]
     public async Task Add_SetSafeAdd_Adds()
     {
         var context = factory.CreateDbContext();
-        context.Nodes.Add(new MockNode() { Name = "A", SafeAdd = true });
+        MockNode A = new() { Name = "A" };
+        A.Register();
+        context.Nodes.Add(A);
         await context.SaveChangesAsync();
         Assert.NotNull(context.Nodes.FirstOrDefault());
     }
@@ -23,15 +23,5 @@ public class NodeTests
         var context = factory.CreateDbContext();
         context.Nodes.Add(new MockNode() { Name = "A" });
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
-    }
-
-    class MockNode : Node
-    {
-        public required string Name { get; set; }
-    }
-
-    class MockDbContext(DbContextOptions<MockDbContext> options) : DbContext(options)
-    {
-        public DbSet<MockNode> Nodes { get; set; }
     }
 }

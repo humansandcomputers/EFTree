@@ -10,13 +10,22 @@ public abstract class Node
     public Guid Id { get; set; }
     internal long Left { get; set; }
     internal long Right { get; set; }
-    [Required] public bool? SafeAdd { get; internal set; }
+    [Required] public bool? SafeAdd { get; private set; }
 
     public Node() { }
-    internal Node(long position)
+
+    internal void UnRegister() => SafeAdd = null;
+    internal void Register() => SafeAdd = true;
+    internal void SetOffset(long offset, bool right)
+    {
+        if (right)
+            Right += offset;
+        else
+            Left += offset;
+    }
+    internal void SetPosition(long position)
     {
         Left = position;
         Right = position + 1;
-        SafeAdd = true;
     }
 }
