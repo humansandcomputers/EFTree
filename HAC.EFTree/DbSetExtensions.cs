@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 
 namespace HAC.EFTree;
-
 public static class DbSetExtensions
 {
     static Expression<Func<T, bool>> GetRangeExpression<T>(bool right, long? start = default, long? end = default, bool? registered = default)
@@ -70,8 +69,7 @@ public static class DbSetExtensions
 
     static long? MinLeft<T>(this DbSet<T> set) where T : Node => set.Extremum(x => x == null ? null : x.Left, true);
 
-    static void Add<T>(this DbSet<T> set, T node, long start)
-        where T : Node
+    static void Add<T>(this DbSet<T> set, T node, long start) where T : Node
     {
         set.Shift(2, start);
         node.SetPosition(start);
@@ -79,8 +77,7 @@ public static class DbSetExtensions
         set.Add(node);
     }
 
-    static void ValidateAdd<T>(T node, T? toNode = default, [CallerArgumentExpression(nameof(toNode))] string? name = default)
-        where T : Node
+    static void ValidateAdd<T>(T node, T? toNode = default, [CallerArgumentExpression(nameof(toNode))] string? name = default) where T : Node
     {
         if (node.SafeAdd is true)
             throw new ArgumentException("Can't add node that has been added previously.");
@@ -88,32 +85,28 @@ public static class DbSetExtensions
             throw new ArgumentException($"Can't add node to a {name} node that is not added yet.");
     }
 
-    public static void AddBefore<T>(this DbSet<T> set, T node, T? sibling = default)
-        where T : Node
+    public static void AddBefore<T>(this DbSet<T> set, T node, T? sibling = default) where T : Node
     {
         ValidateAdd(node, sibling);
         var start = sibling?.Left ?? set.MinLeft() ?? default;
         set.Add(node, start);
     }
 
-    public static void AddAfter<T>(this DbSet<T> set, T node, T? sibling = default)
-        where T : Node
+    public static void AddAfter<T>(this DbSet<T> set, T node, T? sibling = default) where T : Node
     {
         ValidateAdd(node, sibling);
         var start = (sibling?.Right + 1) ?? (set.MaxRight() + 1) ?? default;
         set.Add(node, start);
     }
 
-    public static void AddChild<T>(this DbSet<T> set, T node, T? parent = default)
-        where T : Node
+    public static void AddChild<T>(this DbSet<T> set, T node, T? parent = default) where T : Node
     {
         ValidateAdd(node, parent);
         var start = parent?.Right ?? (set.MaxRight() + 1) ?? default;
         set.Add(node, start);
     }
 
-    public static void Move<T>(this DbSet<T> set, T node, T? parent = default)
-        where T : Node
+    public static void Move<T>(this DbSet<T> set, T node, T? parent = default) where T : Node
     {
         var right = parent?.Right ?? (set.MaxRight() + 1) ?? default;
         var patch = new Span(right < node.Left ? node.Left : node.Right + 1, right);
@@ -126,6 +119,19 @@ public static class DbSetExtensions
         set.Shift(patchMove, patch.Start, patch.End, true);
         set.UpdateAll(x => x.Register(), hole.Start, hole.End);
     }
+
+    public static IQueryable<T> Children<T>(this DbSet<T> set, T node) where T : Node
+    {
+        return set
+            .Where(x => node.Left < x.Left && x.Right < node.Right)
+            .Where(x => !set.Any(mid =>
+                node.Left < mid.Left && mid.Right < node.Right &&
+                mid.Left < x.Left && x.Right < mid.Right
+            ));
+    }
+
+    public static IQueryable<T> AllChildren<T>(this DbSet<T> set, T node) where T : Node
+        => set.Where(x => node.Left < x.Left && x.Right < node.Right);
 
     class Span(long a, long b)
     {

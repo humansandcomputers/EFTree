@@ -4,7 +4,7 @@ namespace HAC.EFTree.Tests.Helpers;
 
 class TreeAssert
 {
-    public static void Single(DbSet<MockNode> set, out MockNode node, [CallerArgumentExpression(nameof(node))] string name = "")
+    public static void Single(IEnumerable<MockNode> set, out MockNode node, [CallerArgumentExpression(nameof(node))] string name = "")
         => node = Assert.Single(set, x => x.Name == name.Replace("var ", ""));
 
     public static void Node(MockNode node) => Assert.True(node.Left < node.Right,
